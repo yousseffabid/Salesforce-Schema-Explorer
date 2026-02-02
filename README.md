@@ -1,4 +1,4 @@
-# SF Schema Explorer
+# Salesforce Schema Explorer
 
 <p align="center">
   <img src="icons/icon128.png" alt="SF Schema Explorer Logo" width="128">

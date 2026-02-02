@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Salesforce Schema Explorer",
-  "short_name": "Schema Explorer",
+  "short_name": "SchemaExplr",
   "version": "1.0.0",
   "description": "Explore Salesforce object schemas and relationships visually. Quickly understand data models with one click.",
   "author": "Youssef Abid",

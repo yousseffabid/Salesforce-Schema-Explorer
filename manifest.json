@@ -1,0 +1,80 @@
+{
+  "manifest_version": 3,
+  "name": "Salesforce Schema Explorer",
+  "short_name": "Schema Explorer",
+  "version": "1.0.0",
+  "description": "Explore Salesforce object schemas and relationships visually. Quickly understand data models with one click.",
+  "author": "Youssef Abid",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "Salesforce Schema Explorer - Click to explore object relationships"
+  },
+  "background": {
+    "service_worker": "background/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.salesforce.com/*",
+        "https://*.force.com/*",
+        "https://*.salesforce-setup.com/*"
+      ],
+      "js": [
+        "content/modules/utils.js",
+        "content/modules/session.js",
+        "content/modules/url.js",
+        "content/modules/ui.js",
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "cookies"
+  ],
+  "host_permissions": [
+    "https://*.salesforce.com/*",
+    "https://*.force.com/*",
+    "https://*.salesforce-setup.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "schema/schema.html",
+        "schema/schema.css",
+        "schema/schema.js",
+        "schema/cytoscape.min.js",
+        "content/resources/session-extractor.js",
+        "icons/*"
+      ],
+      "matches": [
+        "https://*.salesforce.com/*",
+        "https://*.force.com/*",
+        "https://*.salesforce-setup.com/*"
+      ]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "minimum_chrome_version": "109",
+  "offline_enabled": false
+}

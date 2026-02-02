@@ -1,0 +1,303 @@
+/**
+ * =============================================================================
+ * SF Schema Explorer - Content Script Styles
+ * =============================================================================
+ * 
+ * Styles for the floating button injected into Salesforce pages.
+ * 
+ * DESIGN PRINCIPLES:
+ * - Unobtrusive: Button is visible but doesn't interfere with Salesforce UI
+ * - Consistent: Follows Salesforce Lightning Design System colors
+ * - Accessible: Proper focus states and sufficient color contrast
+ * - Responsive: Works on all screen sizes
+ * 
+ * BUTTON BEHAVIOR:
+ * - Starts at 70% opacity to be subtle
+ * - Full opacity on hover to indicate interactivity
+ * - Scale animation on hover for visual feedback
+ * - Loading spinner when processing
+ * 
+ */
+
+/* =============================================================================
+   FLOATING BUTTON
+   
+   The main trigger for opening the Schema Explorer.
+   Positioned fixed in the top-right corner of the viewport.
+   ============================================================================= */
+
+.sfschema-floating-btn {
+  /*
+   * POSITIONING
+   * - Fixed position keeps the button visible during scroll
+   * - Top: 160px places it below the Salesforce global header
+   * - Right: 0px provides no margin from the viewport edge
+   * - Z-index: 9998 ensures it appears above most Salesforce elements
+   *   (but below modals which typically use 10000+)
+   */
+  position: fixed;
+  top: 160px;
+  right: 0px;
+  z-index: 9998;
+
+  /*
+   * LAYOUT
+   * - Inline-flex creates a flex container that's inline
+   * - Center alignment puts the icon in the middle of the button
+   */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /*
+   * SIZE
+   * - 32x32px is compact but still easy to click/tap
+   * - No padding needed since we use fixed dimensions
+   */
+  width: 32px;
+  height: 32px;
+  padding: 0;
+
+  /*
+   * APPEARANCE
+   * - Salesforce brand blue (#0176d3) for visual consistency
+   * - White text/icon color for contrast
+   * - Subtle border and shadow for depth
+   * - Circular shape via 50% border-radius
+   */
+  background-color: #0176d3;
+  color: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+
+  /*
+   * INTERACTION
+   * - Pointer cursor indicates clickability
+   * - 70% opacity makes it unobtrusive by default
+   *   (becomes fully visible on hover)
+   */
+  cursor: pointer;
+  opacity: 0.7;
+
+  /*
+   * TRANSITIONS
+   * - Smooth animations for all interactive states
+   * - 200ms duration feels responsive without being jarring
+   */
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+/*
+ * HOVER STATE
+ * - Full opacity makes the button prominent
+ * - Darker blue (#014486) indicates interactive state
+ * - Scale(1.1) provides visual "lift" feedback
+ * - Enhanced shadow reinforces the "raised" effect
+ */
+.sfschema-floating-btn:hover {
+  opacity: 1;
+  background-color: #014486;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(1, 118, 211, 0.4);
+}
+
+/*
+ * ACTIVE/PRESSED STATE
+ * - Scale back to normal creates "pressed" effect
+ * - Reduced shadow reinforces the "pressed down" visual
+ */
+.sfschema-floating-btn:active {
+  transform: scale(1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/*
+ * FOCUS STATE (Keyboard Navigation)
+ * - Blue focus ring for accessibility
+ * - Critical for users navigating with keyboard
+ * - Visible even when element is not hovered
+ */
+.sfschema-floating-btn:focus {
+  outline: none;
+  opacity: 1;
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(1, 118, 211, 0.4);
+}
+
+/*
+ * DISABLED/LOADING STATE
+ * - Reduced opacity indicates non-interactive state
+ * - Wait cursor tells user to wait
+ * - Applied when button is processing a click
+ */
+.sfschema-floating-btn:disabled,
+.sfschema-floating-btn.sfschema-loading {
+  cursor: wait;
+  opacity: 0.3;
+}
+
+/*
+ * HIDDEN STATE
+ * - Used to hide button on unsupported pages
+ * - !important ensures this overrides any other display rules
+ */
+.sfschema-floating-btn.sfschema-hidden {
+  display: none !important;
+}
+
+/* =============================================================================
+   BUTTON ICON
+   
+   The emoji icon inside the button.
+   ============================================================================= */
+
+.sfschema-btn-icon {
+  /*
+   * SIZE
+   * - 16px is readable at the button's 32px size
+   * - line-height: 1 prevents extra spacing
+   */
+  font-size: 16px;
+  line-height: 1;
+}
+
+/*
+ * LOADING ANIMATION
+ * - Spin animation indicates processing
+ * - Applied when button has .sfschema-loading class
+ */
+.sfschema-floating-btn.sfschema-loading .sfschema-btn-icon {
+  animation: sfschema-spin 1s linear infinite;
+}
+
+/*
+ * SPIN KEYFRAMES
+ * - Simple 360-degree rotation
+ * - Linear timing for smooth continuous spin
+ */
+@keyframes sfschema-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =============================================================================
+   NOTIFICATION TOAST
+   
+   Temporary messages displayed to the user (errors, status updates).
+   Appears below the floating button and auto-dismisses.
+   ============================================================================= */
+
+.sfschema-notification {
+  /*
+   * POSITIONING
+   * - Fixed position keeps it visible during scroll
+   * - Positioned below the floating button (top: 90px)
+   * - Right-aligned to match button position
+   */
+  position: fixed;
+  top: 90px;
+  right: 8px;
+  z-index: 10000;
+
+  /*
+   * SIZE
+   * - Max width prevents overly wide notifications
+   * - Padding provides comfortable text spacing
+   */
+  max-width: 280px;
+  padding: 12px 16px;
+
+  /*
+   * TYPOGRAPHY
+   * - Salesforce Sans for consistency
+   * - Medium weight is readable without being heavy
+   */
+  font-family: 'Salesforce Sans', Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+
+  /*
+   * APPEARANCE
+   * - Rounded corners match Salesforce style
+   * - Shadow provides depth
+   * - Background color set by type modifier classes
+   */
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+  /*
+   * ANIMATION
+   * - Starts invisible and slightly offset
+   * - Transitions to visible state when class added
+   */
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+/*
+ * VISIBLE STATE
+ * - Slides into view from the right
+ * - Applied via JavaScript after element is added to DOM
+ */
+.sfschema-notification--visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/*
+ * NOTIFICATION TYPES
+ * - Info (blue): General information
+ * - Warning (orange): Non-critical issues
+ * - Error (red): Problems that need attention
+ */
+.sfschema-notification--info {
+  background-color: #0176d3;
+  color: #ffffff;
+}
+
+.sfschema-notification--warning {
+  background-color: #fe9339;
+  color: #ffffff;
+}
+
+.sfschema-notification--error {
+  background-color: #ea001e;
+  color: #ffffff;
+}
+
+/* =============================================================================
+   ACCESSIBILITY: Reduced Motion
+   
+   Respects user preference for reduced motion.
+   Important for users with vestibular disorders.
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  /*
+   * DISABLE ANIMATIONS
+   * - Removes all transitions and animations
+   * - Button still functions, just without motion
+   */
+  .sfschema-floating-btn,
+  .sfschema-notification {
+    transition: none;
+  }
+
+  .sfschema-floating-btn.sfschema-loading .sfschema-btn-icon {
+    animation: none;
+  }
+}

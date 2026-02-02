@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="../icons/icon32.png">
+  <link rel="stylesheet" href="schema.css">
+  <script src="cytoscape.min.js"></script>
+</head>
+
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header__row">
+        <div class="header__left">
+          <div class="header__logo">
+            <h1 class="header__title">
+              <a href="https://github.com/yousseffabid/Salesforce-Schema-Explorer" target="_blank"
+                class="header__link">Salesforce Schema Explorer</a>
+            </h1>
+          </div>
+          <div class="header__version">
+            <span class="badge badge--outline" id="api-version"></span>
+          </div>
+        </div>
+
+        <div class="header__center">
+          <div class="object-search">
+            <div class="object-search__input-wrapper">
+              <svg class="search-icon" viewBox="0 0 24 24">
+                <path
+                  d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" />
+              </svg>
+              <input type="text" id="object-search-input" class="object-search__input" placeholder="Search objects..."
+                autocomplete="off">
+              <button id="object-search-clear" class="object-search__clear hidden" aria-label="Clear search">×</button>
+            </div>
+            <div id="object-search-results" class="object-search__results hidden"></div>
+          </div>
+        </div>
+
+        <div class="header__right">
+          <div class="button-group">
+            <button class="btn btn--neutral" id="btn-fit" disabled>
+              <svg class="btn__icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path d="M15 15H9v-2h6v2zm-6 4h6v-2H9v2zm6-8H9V9h6v2zm-6-4h6V5H9v2zM5 5h2v14H5V5zm14 0h-2v14h2V5z" />
+              </svg>
+              Fit
+            </button>
+            <button class="btn btn--neutral" id="btn-center" disabled>
+              <svg class="btn__icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-8h10v2H7z" />
+              </svg>
+              Center
+            </button>
+            <button class="btn btn--neutral" id="btn-layout" disabled>
+              <svg class="btn__icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                <path
+                  d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+              </svg>
+              Reset Layout
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main style="flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden;">
+      <!-- Graph Container -->
+      <div id="cy" class="cytoscape-container hidden"></div>
+
+      <!-- Empty State -->
+      <div id="empty-state" class="empty-state">
+        <div class="empty-state__icon">🔍</div>
+        <h2 class="empty-state__title">Select an Object</h2>
+        <p class="empty-state__description">Search for a Salesforce object above to explore its schema and
+          relationships.
+        </p>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading" class="loading-container hidden">
+        <div class="spinner"></div>
+        <p class="loading-text">Loading schema...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="error" class="error-container hidden">
+        <div class="error-icon">⚠️</div>
+        <h2 class="error-title">Something went wrong</h2>
+        <p id="error-message" class="error-message">Failed to load schema.</p>
+        <button id="retry-btn" class="btn btn--brand">Retry</button>
+      </div>
+
+      <!-- Legend -->
+      <div id="legend" class="legend hidden">
+        <div class="legend__header"
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span class="legend__title" style="margin: 0;">Relationships</span>
+
+          <!-- Cache Status/Refresh in Legend -->
+          <div class="cache-status-wrapper" style="display: flex; align-items: center; gap: 4px;">
+            <div class="cache-status" id="cache-status" title="Data freshness">
+              <span class="cache-status__indicator"></span>
+            </div>
+            <button class="cache-refresh-btn" id="cache-refresh-btn" title="Force Refresh Metadata & Cache">
+              <svg viewBox="0 0 24 24">
+                <path
+                  d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="legend__item">
+          <div class="legend__color legend__color--lookup"></div>
+          <span class="legend__label">Lookup</span>
+          <button class="legend__count" id="legend-lookup-count" disabled>0</button>
+        </div>
+        <div class="legend__item">
+          <div class="legend__color legend__color--md"></div>
+          <span class="legend__label">Master-Detail</span>
+          <button class="legend__count" id="legend-md-count" disabled>0</button>
+        </div>
+
+        <div class="legend__objects-section"
+          style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--color-border-light);">
+          <button id="see-objects-btn" class="btn btn--outline-brand btn--full" style="font-size: 0.75rem;">
+            View Objects <span id="objects-count" style="margin-left: 4px; opacity: 0.8;">0 / 0</span>
+          </button>
+        </div>
+
+        <div class="legend__footer">
+          <div class="legend__direction-item">
+            <div class="legend__direction-line legend__direction-line--out"></div>
+            <span class="legend__direction-label">Out</span>
+          </div>
+          <div class="legend__direction-item">
+            <div class="legend__direction-line legend__direction-line--in"></div>
+            <span class="legend__direction-label">In</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Relationship Tabs -->
+      <div id="relationship-tabs" class="relationship-tabs hidden">
+        <button class="relationship-tab relationship-tab--active" id="tab-outgoing">
+          <span class="relationship-tab__icon">→</span>
+          <span class="relationship-tab__label">References</span> <span id="tab-outgoing-count"
+            class="relationship-tab__count">0</span>
+        </button>
+        <button class="relationship-tab" id="tab-incoming">
+          <span class="relationship-tab__icon">←</span>
+          <span class="relationship-tab__label">Referenced By</span> <span id="tab-incoming-count"
+            class="relationship-tab__count">0</span>
+        </button>
+        <button class="relationship-tab" id="tab-all">
+          <span class="relationship-tab__icon">↔</span>
+          <span class="relationship-tab__label">All</span> <span id="tab-all-count"
+            class="relationship-tab__count">0</span>
+        </button>
+      </div>
+
+      <!-- Details Panel -->
+      <div id="details-panel" class="details-panel hidden">
+        <div class="details-panel__header">
+          <div>
+            <h2 id="details-title" class="details-panel__title">Object Name</h2>
+            <div id="details-api-name" class="details-panel__subtitle">API Name</div>
+          </div>
+          <button id="details-close" class="btn-icon" aria-label="Close">×</button>
+        </div>
+
+        <div class="details-panel__meta">
+          <p id="details-description" class="details-description"></p>
+          <div class="details-actions">
+            <div id="object-manager-link" class="details-link">
+              <a href="#" target="_blank" rel="noopener noreferrer">View in Object Manager ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="fields-section">
+          <div class="fields-header">
+            <h3>Fields <span id="details-field-count" class="badge badge--count">0</span></h3>
+
+            <div class="fields-controls">
+              <!-- Search -->
+              <div class="field-search">
+                <svg class="field-search__icon" width="16" height="16" viewBox="0 0 16 16" fill="none"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="7" cy="7" r="5" stroke="#3B82F6" stroke-width="1.5" fill="#EFF6FF" />
+                  <path d="M11 11L14 14" stroke="#8B5CF6" stroke-width="1.5" stroke-linecap="round" />
+                </svg>
+                <input type="text" id="field-search" class="input input--search" placeholder="Search fields..."
+                  aria-label="Filter fields">
+              </div>
+
+              <!-- Type Filter Dropdown -->
+              <div class="type-filter">
+                <button id="type-filter-trigger" class="type-filter__trigger" aria-haspopup="true"
+                  aria-expanded="false">
+                  <span class="type-filter__placeholder">Filter by type...</span>
+                  <svg class="type-filter__arrow" width="10" height="6" viewBox="0 0 10 6" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                      stroke-linejoin="round" />
+                  </svg>
+                </button>
+
+                <div id="type-filter-menu" class="type-filter__menu hidden" role="listbox" aria-multiselectable="true">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Active Filter Chips -->
+            <div id="active-filters" class="active-filters hidden"></div>
+          </div>
+
+          <div id="details-fields" class="fields-list panel__fields">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Relationship Popover -->
+      <div id="relationship-popover" class="popover hidden">
+        <div class="popover__header">
+          <h3 id="popover-title" class="popover__title">Relationships</h3>
+          <button id="popover-close" class="popover__close">×</button>
+        </div>
+        <div id="popover-body" class="popover__body">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </main>
+  </div>
+
+
+  <script type="module" src="schema.js"></script>
+</body>
+
+</html>

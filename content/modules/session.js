@@ -14,10 +14,10 @@ window.SFSchema = window.SFSchema || {};
     // ===========================================================================
 
     /**
-         * Retrieves the Salesforce session ID.
-         * Tries cookies first, then page context.
-         * @returns {string|null} The session ID or null if not found.
-         */
+     * Retrieves the Salesforce session ID.
+     * Tries cookies first, then page context.
+     * @returns {string|null} The session ID or null if not found.
+     */
     function getSessionId() {
         // Method 1: Try reading from cookies directly
         const cookieSession = getSessionIdFromCookie();
@@ -35,9 +35,9 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Extracts session ID from cookies.
-         * @returns {string|null} Session ID or null.
-         */
+     * Extracts session ID from cookies.
+     * @returns {string|null} Session ID or null.
+    */
     function getSessionIdFromCookie() {
         try {
             const cookies = document.cookie.split(';');
@@ -55,9 +55,9 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Extracts session ID from the page context (meta tags, URL hash, inline scripts).
-         * @returns {string|null} Session ID or null.
-         */
+     * Extracts session ID from the page context (meta tags, URL hash, inline scripts).
+     * @returns {string|null} Session ID or null.
+    */
     function getSessionIdFromPage() {
         try {
             // Method 1: Meta tags
@@ -98,10 +98,9 @@ window.SFSchema = window.SFSchema || {};
         return null;
     }
 
-    // Inject extraction script into the main page context
     /**
-         * Injects the session extractor script into the page.
-         */
+     * Injects the session extractor script into the page.
+    */
     function injectSessionExtractor() {
         try {
             // Create a communication element if it doesn't exist

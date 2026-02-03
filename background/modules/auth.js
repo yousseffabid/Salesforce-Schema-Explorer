@@ -10,7 +10,7 @@ import { getMyDomain } from './api.js';
  * 
  * CRITICAL INSIGHT:
  * The session ID from *.lightning.force.com is RESTRICTED and NOT valid for API access.
- * The valid session ID for REST API and Tooling API comes from *.my.salesforce.com.
+ * The valid session ID for REST API comes from *.my.salesforce.com.
  * 
  * @param {string} instanceUrl - The Salesforce instance URL (e.g., https://myorg.my.salesforce.com)
  * @returns {Promise<string|null>} The session ID (sid) or null if not found

@@ -10,7 +10,7 @@
  * Debug mode flag. When true, enables verbose console logging.
  * Set to false for production builds to reduce console noise.
  */
-export const DEBUG = true;
+export const DEBUG = false;
 
 /**
  * Centralized logging utility for SF Schema Explorer.
@@ -60,12 +60,7 @@ export function isSalesforceUrl(url) {
   }
 }
 
-/**
- * Determines if an object should be excluded from the schema explorer.
- * 
- * @param {Object} objectMetadata - Object info from describeGlobal or metadata map
- * @returns {boolean} True if object should be excluded from display
- */
+
 /**
  * Checks if an object is a system object based on its suffix.
  * @param {string} name - Object API name.

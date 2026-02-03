@@ -35,9 +35,9 @@ window.SFSchema = window.SFSchema || {};
     // ===========================================================================
 
     /**
-         * Determines if the floating button should be shown on the current page.
-         * @returns {boolean} True if button should be shown.
-         */
+     * Determines if the floating button should be shown on the current page.
+     * @returns {boolean} True if button should be shown.
+     */
     function shouldShowButton() {
         // Must be on Salesforce domain
         if (!Utils.isSalesforceDomain()) {
@@ -84,18 +84,18 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Checks if the current page is the Lightning home page.
-         * @returns {boolean} True if home page.
-         */
+     * Checks if the current page is the Lightning home page.
+     * @returns {boolean} True if home page.
+     */
     function isHomePage() {
         return window.location.pathname.toLowerCase().includes('/lightning/page/home');
     }
 
     /**
-         * Parses the object list URL to extract object name.
-         * @param {string} pathname - The URL pathname.
-         * @returns {Object|null} Object info or null.
-         */
+     * Parses the object list URL to extract object name.
+     * @param {string} pathname - The URL pathname.
+     * @returns {Object|null} Object info or null.
+     */
     function parseObjectListUrl(pathname) {
         const objectMatch = pathname.match(/\/lightning\/o\/([^/]+)/i);
         if (!objectMatch) return null;
@@ -108,10 +108,10 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Parses the record URL to extract object name and record ID.
-         * @param {string} pathname - The URL pathname.
-         * @returns {Object|null} Object info or null.
-         */
+     * Parses the record URL to extract object name and record ID.
+     * @param {string} pathname - The URL pathname.
+     * @returns {Object|null} Object info or null.
+     */
     function parseRecordUrl(pathname) {
         const recordMatch = pathname.match(/\/lightning\/r\/([^/]+)\/([a-zA-Z0-9]{15,18})/i);
         if (!recordMatch) return null;
@@ -126,11 +126,11 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Parses the Object Manager URL to extract object name.
-         * Resolves DurableId if present.
-         * @param {string} pathname - The URL pathname.
-         * @returns {Promise<Object|null>} Object info or null.
-         */
+     * Parses the Object Manager URL to extract object name.
+     * Resolves DurableId if present.
+     * @param {string} pathname - The URL pathname.
+     * @returns {Promise<Object|null>} Object info or null.
+     */
     async function parseObjectManagerUrl(pathname) {
         const objectManagerMatch = pathname.match(/\/lightning\/setup\/ObjectManager\/([^/]+)/i);
         if (!objectManagerMatch) return null;
@@ -159,10 +159,10 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Extracts object information from the current URL.
-         * Uses caching to avoid redundant parsing.
-         * @returns {Promise<Object|null>} Object info or null.
-         */
+     * Extracts object information from the current URL.
+     * Uses caching to avoid redundant parsing.
+     * @returns {Promise<Object|null>} Object info or null.
+     */
     async function extractObjectInfo() {
         const pathname = window.location.pathname;
 
@@ -214,10 +214,10 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Checks if the identifier matches a custom object ID pattern.
-         * @param {string} identifier - The identifier to check.
-         * @returns {boolean} True if custom object ID.
-         */
+     * Checks if the identifier matches a custom object ID pattern.
+     * @param {string} identifier - The identifier to check.
+     * @returns {boolean} True if custom object ID.
+     */
     function isCustomObjectId(identifier) {
         return (
             SF_ID_PATTERN.test(identifier) &&
@@ -226,10 +226,10 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Resolves a custom object ID to its API name via the background script.
-         * @param {string} objectId - The custom object ID.
-         * @returns {Promise<string|null>} API name or null.
-         */
+     * Resolves a custom object ID to its API name via the background script.
+     * @param {string} objectId - The custom object ID.
+     * @returns {Promise<string|null>} API name or null.
+     */
     async function resolveCustomObjectId(objectId) {
         if (isResolving) return null;
         isResolving = true;
@@ -266,9 +266,9 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Sets up a listener for URL changes (SPA navigation).
-         * @param {Function} onUrlChange - Callback function.
-         */
+     * Sets up a listener for URL changes (SPA navigation).
+     * @param {Function} onUrlChange - Callback function.
+     */
     function setupNavigationListener(onUrlChange) {
         let lastUrl = location.href;
 

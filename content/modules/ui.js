@@ -14,9 +14,9 @@ window.SFSchema = window.SFSchema || {};
     let floatingButton = null;
 
     /**
-         * Creates and injects the floating button into the DOM.
-         * @returns {HTMLElement} The created button element.
-         */
+     * Creates and injects the floating button into the DOM.
+     * @returns {HTMLElement} The created button element.
+     */
     function createFloatingButton() {
         const existing = document.getElementById('sfschema-floating-btn');
         if (existing) {
@@ -37,8 +37,8 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Updates the visibility of the floating button based on the current URL.
-         */
+     * Updates the visibility of the floating button based on the current URL.
+     */
     function updateButtonVisibility() {
         if (!floatingButton) {
             if (Url.shouldShowButton()) {
@@ -55,10 +55,10 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Handles the click event on the floating button.
-         * Extracts context and sends message to open schema explorer.
-         * @param {Event} event - The click event.
-         */
+     * Handles the click event on the floating button.
+     * Extracts context and sends message to open schema explorer.
+     * @param {Event} event - The click event.
+     */
     async function handleButtonClick(event) {
         if (event && event.preventDefault) {
             event.preventDefault();

@@ -207,9 +207,3 @@ function processIncomingFromChildRelationships(objectName, metadata, nodes, exis
 
     return incomingEdges;
 }
-
-/**
- * Helper: Merges incoming relationships from the high-fidelity index into the map.
- * Creates shadow nodes for objects that are referenced but not fully loaded.
- */
-

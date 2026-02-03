@@ -2,7 +2,7 @@
  * Salesforce Schema Explorer - Schema Utilities
  */
 
-export const DEBUG = true;
+export const DEBUG = false;
 
 /**
  * Centralized logging utility for SF Schema Explorer.

@@ -12,7 +12,7 @@ window.SFSchema = window.SFSchema || {};
     // DEBUG CONFIGURATION
     // ===========================================================================
 
-    const DEBUG = true;
+    const DEBUG = false;
 
     const Logger = {
         /** Detailed diagnostic output for development only. */
@@ -41,9 +41,9 @@ window.SFSchema = window.SFSchema || {};
     // ===========================================================================
 
     /**
-         * Checks if the current page is on a Salesforce domain.
-         * @returns {boolean} True if Salesforce domain.
-         */
+     * Checks if the current page is on a Salesforce domain.
+     * @returns {boolean} True if Salesforce domain.
+     */
     function isSalesforceDomain() {
         const hostname = window.location.hostname.toLowerCase();
         return (
@@ -54,17 +54,17 @@ window.SFSchema = window.SFSchema || {};
     }
 
     /**
-         * Checks if the current page is a setup domain.
-         * @returns {boolean} True if setup domain.
-         */
+     * Checks if the current page is a setup domain.
+     * @returns {boolean} True if setup domain.
+     */
     function isSetupDomain() {
         return window.location.hostname.includes('salesforce-setup.com');
     }
 
     /**
-         * Gets the normalized instance URL.
-         * @returns {string} Instance URL.
-         */
+     * Gets the normalized instance URL.
+     * @returns {string} Instance URL.
+     */
     function getInstanceUrl() {
         const hostname = window.location.hostname;
         // Setup domain: convert to main salesforce.com domain
@@ -79,10 +79,10 @@ window.SFSchema = window.SFSchema || {};
     // ===========================================================================
 
     /**
-         * Shows a temporary notification on the UI.
-         * @param {string} message - The message to display.
-         * @param {string} [type='info'] - The type of notification (info/error).
-         */
+     * Shows a temporary notification on the UI.
+     * @param {string} message - The message to display.
+     * @param {string} [type='info'] - The type of notification (info/error).
+     */
     function showNotification(message, type = 'info') {
         const existing = document.getElementById('sfschema-notification');
         if (existing) {

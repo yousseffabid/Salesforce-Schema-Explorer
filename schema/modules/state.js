@@ -10,36 +10,16 @@ export const state = {
     sessionId: null,
     isSetupDomain: false,
 
-    // Object Metadata Map (cached from background service)
-    // Structure: { objectName: { info, fields, relationships } }
-    objectMetadataMap: null,
-    metadataMapLoading: false,
-
     // Data Caches
     metadata: new Map(),
     allObjects: [],
 
+    // Normalized Graph Data
+    nodes: {},
+    edges: {},
+
     // Relationship Cache (from Tooling API)
     relationshipCache: null,
-    relationshipCacheLoading: false,
-
-    // Loading state tracker - counts how many operations are in progress
-    activeLoadingOperations: 0,
-
-    // Cytoscape Graph
-    cy: null,
-
-    // Current relationships for selected object
-    relationships: {
-        outgoing: { lookup: [], masterDetail: [] },
-        incoming: { lookup: [], masterDetail: [] }
-    },
-
-    // Excluded relationships (objects that were filtered out)
-    excludedRelationships: {
-        outgoing: { lookup: [], masterDetail: [] },
-        incoming: { lookup: [], masterDetail: [] }
-    },
 
     // User-excluded objects (Set of object API names)
     userExcludedObjects: new Set(),

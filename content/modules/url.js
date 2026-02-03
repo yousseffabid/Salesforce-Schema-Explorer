@@ -201,6 +201,13 @@ window.SFSchema = window.SFSchema || {};
             return cachedObjectInfo;
         }
 
+        // Explicitly ignore Object Manager Home (no object context expected)
+        if (pathname.toLowerCase().includes('/objectmanager/home')) {
+            Utils.Logger.debug('[URL:Extract] On Object Manager Home - no object context');
+            cachedObjectInfo = null;
+            return null;
+        }
+
         Utils.Logger.warn('[URL:Extract] Could not extract object info from URL', { pathname });
         cachedObjectInfo = null;
         return null;

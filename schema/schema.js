@@ -17,11 +17,6 @@ import {
   clearObjectMetadataCache
 } from './modules/api.js';
 import {
-  extractRelationshipsFromMetadataMap,
-  extractRelationshipsFromCache,
-  extractRelationshipsFromMetadata
-} from './modules/data.js';
-import {
   showLoading,
   showEmptyState,
   showError,
@@ -58,32 +53,22 @@ async function loadObjectSchema(objectApiName) {
     state.objectApiName = objectApiName;
     document.title = `Schema: ${objectApiName}`;
 
-    // Fetch main object metadata
-    const mainMetadata = await fetchObjectMetadata(objectApiName);
+    // Verify metadata for current graph context
+    const { ensureGraphMetadata, fetchObjectMetadata } = await import('./modules/api.js');
+    await ensureGraphMetadata(objectApiName);
 
-    // Determine relationships source
-    if (state.objectMetadataMap && state.objectMetadataMap[objectApiName]) {
-      const result = extractRelationshipsFromMetadataMap(objectApiName);
-      state.relationships = { outgoing: result.outgoing, incoming: result.incoming };
-      state.excludedRelationships = { outgoing: result.excludedOutgoing, incoming: result.excludedIncoming };
-    } else if (state.relationshipCache) {
-      const result = extractRelationshipsFromCache(objectApiName);
-      state.relationships = { outgoing: result.outgoing, incoming: result.incoming };
-      state.excludedRelationships = { outgoing: result.excludedOutgoing, incoming: result.excludedIncoming };
-    } else {
-      const result = extractRelationshipsFromMetadata(mainMetadata);
-      state.relationships = { outgoing: result.outgoing, incoming: { lookup: [], masterDetail: [] } };
-      state.excludedRelationships = { outgoing: result.excludedOutgoing, incoming: { lookup: [], masterDetail: [] } };
-    }
+    // Fetch main object metadata (should now be in cache/map)
+    const mainMetadata = await fetchObjectMetadata(objectApiName);
 
     // Load user exclusions FIRST
     const { loadObjectExclusions } = await import('./modules/storage.js');
     state.userExcludedObjects = loadObjectExclusions(objectApiName);
 
+
     showGraph();
     updateLegendCounts(); // Updates MD/Lookup counts
     updateObjectsCount(); // Updates "See Objects" button count
-    updateRelationshipTabs(); // Updates Tab counts (now using correct exclusions)
+    updateRelationshipTabs(); // Updates Tab counts (now using normalized edges)
 
     await buildGraph(mainMetadata);
 
@@ -105,6 +90,7 @@ async function switchRelationshipView(view) {
   state.activeRelationshipView = view;
   updateActiveTab();
   updateLegendCounts();
+  updateObjectsCount();
 
   if (state.objectApiName) {
     // Rebuild graph with new view filter
@@ -128,23 +114,17 @@ async function handleCacheRefresh() {
 
     startLoadingOperation();
 
-    // Step 1: Invalidate cache
+    // Clear caches and state before reloading.
     await refreshRelationshipCache();
-
-    // Step 2: Clear metatadata and reload
     await clearObjectMetadataCache();
-    await loadObjectMetadataMap(true);
 
-    // Step 3: Load fresh relationship cache
-    await loadRelationshipCache(true, false);
+    // Clear normalized graph data (already cleared by clearObjectMetadataCache, but explicit for clarity)
+    state.nodes = {};
+    state.edges = {};
+    state.metadata.clear();
+    state.relationshipCache = null;
 
-    // Step 4: Reload current object schema
-    if (state.objectApiName) {
-      await loadObjectSchema(state.objectApiName);
-    }
-
-    completeLoadingOperation(new Date().getTime(), false);
-    logger.info('[Schema:refresh] Cache refresh complete');
+    window.location.reload();
 
   } catch (error) {
     logger.error('[Schema:refresh] Cache refresh error', { error: error.message });
@@ -196,25 +176,20 @@ async function init() {
       state.allObjects = [];
     }
 
-    // Load Object Metadata Map
+    // Load Object Metadata Map (From Cache Only - non-blocking)
     try {
-      logger.debug('[Schema:init] Fetching Object Metadata Map');
-      startLoadingOperation();
-
-      await loadObjectMetadataMap();
-
-      completeLoadingOperation(Date.now(), false);
+      logger.debug('[Schema:init] Loading cached metadata map');
+      await loadObjectMetadataMap(false);
     } catch (error) {
-      resetLoadingOperations();
-      logger.warn('[Schema:init] Failed to load Object Metadata Map', { error: error.message });
+      logger.warn('[Schema:init] Failed to load initial metadata map', { error: error.message });
     }
 
-    // Load Relationship Cache (Background)
-    loadRelationshipCache(false, false).catch(e => logger.warn('[Schema:init] Failed to pre-load relationship cache', { error: e.message }));
 
     // Handle Prepopulated Context
     if (context.objectApiName) {
       logger.debug('[Schema:init] Context object loaded', { object: context.objectApiName });
+
+
 
       const obj = state.allObjects.find(o => o.name === context.objectApiName);
       if (obj) {

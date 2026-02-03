@@ -19,11 +19,10 @@
 ### What We Store Locally
 The extension uses the following browser storage mechanisms:
 - **localStorage**: Stores your object inclusion/exclusion preferences (permanent). [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/schema/modules/storage.js)
-- **IndexedDB**: Caches Salesforce object metadata for 7 days. [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/background/modules/cache.js#L87-L204)
-- **chrome.storage.local**: Caches relationship data for 7 days. [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/background/modules/cache.js#L15-L84)
-- **chrome.storage.session**: Temporarily stores session context (cleared when browser closes). [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/background/background.js#L120)
+- **IndexedDB**: Caches Salesforce object metadata and relationship mapping for 7 days. [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/background/modules/cache.js)
+- **chrome.storage.session**: Temporarily stores session context (cleared when the browser session ends). [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/background/background.js)
 
-You can inspect what is stored in localStorage by following [this Chrome DevTools tutorial](https://developer.chrome.com/docs/devtools/storage/localstorage).
+You can inspect what is stored in your browser by following [this Chrome DevTools tutorial](https://developer.chrome.com/docs/devtools/storage/localstorage).
 
 
 ## 4. Third Parties

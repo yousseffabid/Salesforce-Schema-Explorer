@@ -10,7 +10,7 @@
  * Debug mode flag. When true, enables verbose console logging.
  * Set to false for production builds to reduce console noise.
  */
-export const DEBUG = false;
+export const DEBUG = true;
 
 /**
  * Centralized logging utility for SF Schema Explorer.
@@ -66,6 +66,20 @@ export function isSalesforceUrl(url) {
  * @param {Object} objectMetadata - Object info from describeGlobal or metadata map
  * @returns {boolean} True if object should be excluded from display
  */
+/**
+ * Checks if an object is a system object based on its suffix.
+ * @param {string} name - Object API name.
+ * @returns {boolean} True if system object.
+ */
+export function isSystemObject(name) {
+  if (!name) return false;
+  const systemSuffixes = [
+    '__History', 'ChangeEvent', '__Share', '__e',
+    'FieldHistory', '__Tag', '__Feed'
+  ];
+  return systemSuffixes.some(suffix => name.endsWith(suffix));
+}
+
 export function shouldExcludeObject(objectMetadata) {
   if (!objectMetadata) return true;  // null/undefined objects excluded
 
@@ -82,6 +96,9 @@ export function shouldExcludeObject(objectMetadata) {
 
   // Special case: Always include User
   if (name === 'User') return false;
+
+  // Criteria 4: Exclude System Suffixes (History, Share, Feed, etc.)
+  if (isSystemObject(name)) return true;
 
   return false;
 }

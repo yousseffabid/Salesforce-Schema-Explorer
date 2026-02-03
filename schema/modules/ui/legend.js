@@ -14,64 +14,52 @@ import { isObjectExcluded } from '../excludedObjects.js';
  * Updates the relationship tab counts based on current visibility.
  */
 export function updateRelationshipTabs() {
-    const { outgoing, incoming } = state.relationships;
+    const edges = state.edges ? Object.values(state.edges) : [];
 
-    // Helper to calculate visible/total counts for a set of relationships
-    const getCounts = (activeRels, excludedRels) => {
+    // Helper to count unique partners
+    const count = (viewType) => {
         const uniqueTotal = new Set();
         const uniqueVisible = new Set();
 
-        const process = (relList) => {
-            relList.forEach(rel => {
-                const partner = rel.targetObject === state.objectApiName ? rel.sourceObject : rel.targetObject;
-                if (partner && partner !== state.objectApiName) {
-                    uniqueTotal.add(partner);
+        edges.forEach(edge => {
+            // Filter by view type
+            const isOutgoing = edge.source === state.objectApiName;
+            const isIncoming = edge.target === state.objectApiName;
 
-                    // Check visibility: Not User Excluded AND Not System Excluded
-                    const isUserExcluded = state.userExcludedObjects.has(partner);
-                    const isSystemExcluded = isObjectExcluded(partner); // Use the internal check
+            if (viewType === 'outgoing' && !isOutgoing) return;
+            if (viewType === 'incoming' && !isIncoming) return;
+            if (viewType === 'all' && !isOutgoing && !isIncoming) return;
 
-                    if (!isUserExcluded && !isSystemExcluded) {
-                        uniqueVisible.add(partner);
-                    }
+            const partner = isOutgoing ? edge.target : edge.source;
+            if (partner && partner !== state.objectApiName) {
+                uniqueTotal.add(partner);
+
+                const isUserExcluded = state.userExcludedObjects.has(partner);
+                const isSystemExcluded = isObjectExcluded(partner);
+
+                if (!isUserExcluded && !isSystemExcluded) {
+                    uniqueVisible.add(partner);
                 }
-            });
-        };
-
-        // Process active relationships (Salesforce metadata)
-        process([...activeRels.lookup, ...activeRels.masterDetail]);
-
-        // Process excluded relationships (System filtered)
-        if (excludedRels) {
-            process([...(excludedRels.lookup || []), ...(excludedRels.masterDetail || [])]);
-        }
-
+            }
+        });
         return { visible: uniqueVisible.size, total: uniqueTotal.size };
     };
 
-    const outgoingCounts = getCounts(outgoing, state.excludedRelationships?.outgoing);
-    const incomingCounts = getCounts(incoming, state.excludedRelationships?.incoming);
-
-    // For ALL, we combine everything
-    const allActive = {
-        lookup: [...outgoing.lookup, ...incoming.lookup],
-        masterDetail: [...outgoing.masterDetail, ...incoming.masterDetail]
-    };
-    const allExcluded = {
-        lookup: [...(state.excludedRelationships?.outgoing?.lookup || []), ...(state.excludedRelationships?.incoming?.lookup || [])],
-        masterDetail: [...(state.excludedRelationships?.outgoing?.masterDetail || []), ...(state.excludedRelationships?.incoming?.masterDetail || [])]
-    };
-    const allCounts = getCounts(allActive, allExcluded);
+    const outgoingCounts = count('outgoing');
+    const incomingCounts = count('incoming');
+    const allCounts = count('all');
 
     if (elements.tabOutgoingCount) elements.tabOutgoingCount.textContent = `${outgoingCounts.visible} / ${outgoingCounts.total}`;
     if (elements.tabIncomingCount) elements.tabIncomingCount.textContent = `${incomingCounts.visible} / ${incomingCounts.total}`;
     if (elements.tabAllCount) elements.tabAllCount.textContent = `${allCounts.visible} / ${allCounts.total}`;
 
+    // We implicitly don't support "excluded relationships" count in the old way accurately without iterating exclusions.
+    // For now, let's assume if total > visible, we show the section.
     const hasExcluded = (allCounts.total - allCounts.visible) > 0;
 
     const excludedSection = document.getElementById('legend-excluded-section');
     if (excludedSection) {
-        excludedSection.style.display = 'block';
+        excludedSection.style.display = 'block'; // Always block? Logic was weird before.
     }
 
     updateActiveTab();
@@ -99,19 +87,33 @@ export function updateActiveTab() {
  * @returns {Object} Helper object with lookup and masterDetail arrays.
  */
 export function getActiveRelationships() {
-    switch (state.activeRelationshipView) {
-        case 'outgoing':
-            return state.relationships.outgoing;
-        case 'incoming':
-            return state.relationships.incoming;
-        case 'all':
-            return {
-                lookup: [...state.relationships.outgoing.lookup, ...state.relationships.incoming.lookup],
-                masterDetail: [...state.relationships.outgoing.masterDetail, ...state.relationships.incoming.masterDetail]
+    const edges = state.edges ? Object.values(state.edges) : [];
+    const lookup = [];
+    const masterDetail = [];
+
+    edges.forEach(edge => {
+        const isOutgoing = edge.source === state.objectApiName;
+        const isIncoming = edge.target === state.objectApiName;
+
+        let include = false;
+        if (state.activeRelationshipView === 'outgoing' && isOutgoing) include = true;
+        else if (state.activeRelationshipView === 'incoming' && isIncoming) include = true;
+        else if (state.activeRelationshipView === 'all' && (isOutgoing || isIncoming)) include = true;
+
+        if (include) {
+            // Create legacy-like structure for consumption
+            const rel = {
+                ...edge,
+                sourceObject: edge.source,
+                targetObject: edge.target
             };
-        default:
-            return { lookup: [], masterDetail: [] };
-    }
+
+            if (edge.isMasterDetail) masterDetail.push(rel);
+            else lookup.push(rel);
+        }
+    });
+
+    return { lookup, masterDetail };
 }
 
 /**
@@ -146,7 +148,8 @@ export function updateObjectsCount() {
     if (!objectsCountEl) return;
 
     // Get ALL known related objects (including user-excluded AND system-excluded)
-    const allObjects = getRelatedObjectsList(true); // true = include system excluded
+    const allObjects = getRelatedObjectsList(false); // system exclusion is handled in edge logic now
+    // Actually, getRelatedObjectsList needs to rely on Edges now.
     const totalCount = allObjects.length;
 
     // Visible = Total - (UserExcluded + SystemExcluded)
@@ -158,46 +161,33 @@ export function updateObjectsCount() {
 }
 
 /**
- * Get list of related objects based on current view (includes ALL objects even system-excluded)
+ * Get list of related objects for the CURRENT TAB only.
+ * - Respects the active relationship view (outgoing/incoming/all)
+ * - Includes both included and user-excluded objects for that tab.
  * @param {boolean} includeSystemExcluded - If true, include system-excluded objects in the list
  */
 export function getRelatedObjectsList(includeSystemExcluded = true) {
-    const activeRels = getActiveRelationships();
-    const allRelationships = [...activeRels.lookup, ...activeRels.masterDetail];
-
-    // Also include system-excluded relationships for complete list
-    const systemExcluded = state.excludedRelationships;
-    if (includeSystemExcluded && systemExcluded) {
-        const excludedRels = [];
-
-        // Add outgoing excluded relationships if view is outgoing or all
-        if (state.activeRelationshipView === 'outgoing' || state.activeRelationshipView === 'all') {
-            excludedRels.push(
-                ...(systemExcluded.outgoing?.lookup || []),
-                ...(systemExcluded.outgoing?.masterDetail || [])
-            );
-        }
-
-        // Add incoming excluded relationships if view is incoming or all
-        if (state.activeRelationshipView === 'incoming' || state.activeRelationshipView === 'all') {
-            excludedRels.push(
-                ...(systemExcluded.incoming?.lookup || []),
-                ...(systemExcluded.incoming?.masterDetail || [])
-            );
-        }
-
-        allRelationships.push(...excludedRels);
-    }
-
+    const edges = state.edges ? Object.values(state.edges) : [];
     const objectsSet = new Set();
-    for (const rel of allRelationships) {
-        const obj = rel.targetObject !== state.objectApiName
-            ? rel.targetObject
-            : rel.sourceObject;
-        if (obj && obj !== state.objectApiName) {
-            objectsSet.add(obj);
-        }
-    }
 
-    return [...objectsSet].sort();
+    edges.forEach(edge => {
+        const isOutgoing = edge.source === state.objectApiName;
+        const isIncoming = edge.target === state.objectApiName;
+
+        if (state.activeRelationshipView === 'outgoing' && !isOutgoing) return;
+        if (state.activeRelationshipView === 'incoming' && !isIncoming) return;
+        if (state.activeRelationshipView === 'all' && !isOutgoing && !isIncoming) return;
+
+        const partner = isOutgoing ? edge.target : edge.source;
+        if (!partner || partner === state.objectApiName) return;
+
+        if (!includeSystemExcluded && isObjectExcluded(partner)) return;
+
+        objectsSet.add(partner);
+    });
+
+    const result = [...objectsSet].sort();
+
+    return result;
 }
+

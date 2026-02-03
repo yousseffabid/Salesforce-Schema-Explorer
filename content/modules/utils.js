@@ -12,7 +12,7 @@ window.SFSchema = window.SFSchema || {};
     // DEBUG CONFIGURATION
     // ===========================================================================
 
-    const DEBUG = false;
+    const DEBUG = true;
 
     const Logger = {
         /** Detailed diagnostic output for development only. */

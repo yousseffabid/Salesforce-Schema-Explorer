@@ -2,7 +2,7 @@
  * Salesforce Schema Explorer - Relationship Utilities
  */
 
-import { logger, shouldExcludeObject } from './utils.js';
+import { logger, isSystemObject } from './utils.js';
 import { fetchWithRetry, MAX_RETRY_ATTEMPTS } from './api.js';
 import { extractSessionIdFromCookies } from './auth.js';
 import {
@@ -28,6 +28,8 @@ async function fetchRelationshipsViaRestApi(instanceUrl, apiVersion, sessionId) 
     const outgoingRelationships = {};
     const incomingRelationships = {};
     let totalRelationships = 0;
+    const failedObjects = [];
+    let processedObjects = 0;
 
     try {
         const version = apiVersion || '66.0';
@@ -42,35 +44,49 @@ async function fetchRelationshipsViaRestApi(instanceUrl, apiVersion, sessionId) 
             .filter(object => object.queryable && !object.deprecatedAndHidden)
             .map(object => object.name);
 
-        logger.info('[Relationships:fetchREST] Found queryable objects', { count: queryableObjects.length });
-
         const batchSize = 10;
+        const totalBatches = Math.ceil(queryableObjects.length / batchSize);
+
+        logger.info('[Relationships:fetchREST] Starting relationship fetch', {
+            queryableObjects: queryableObjects.length,
+            batchSize,
+            totalBatches
+        });
 
         for (let i = 0; i < queryableObjects.length; i += batchSize) {
             const batch = queryableObjects.slice(i, i + batchSize);
+            const batchNumber = Math.floor(i / batchSize) + 1;
+
+            // Fetch batch in parallel (no logging in loop)
             const describePromises = batch.map(objectName =>
                 fetchWithRetry(
                     `${instanceUrl}/services/data/v${version}/sobjects/${objectName}/describe`,
                     MAX_RETRY_ATTEMPTS,
                     sessionId,
                     false
-                ).then(data => ({ objectName, data }))
+                ).then(data => ({ objectName, data, success: true }))
                     .catch(error => {
-                        logger.warn('[Relationships:fetchREST] Failed to describe', { objectName, error: error.message });
-                        return null;
+                        // Collect failures for summary (no logging in loop)
+                        return { objectName, data: null, success: false, error: error.message };
                     })
             );
 
             const results = await Promise.all(describePromises);
 
+            // Process results without logging in loop
             for (const result of results) {
-                if (!result?.data) continue;
+                if (!result.success || !result.data) {
+                    failedObjects.push({ objectName: result.objectName, error: result.error });
+                    continue;
+                }
 
+                processedObjects++;
                 const sourceObject = result.data.name;
                 const sourceLabel = result.data.label;
 
                 if (!result.data.fields) continue;
 
+                // Process fields (no logging in loop)
                 for (const field of result.data.fields) {
                     if (!field.relationshipName || !field.referenceTo || field.referenceTo.length === 0) {
                         continue;
@@ -105,16 +121,12 @@ async function fetchRelationshipsViaRestApi(instanceUrl, apiVersion, sessionId) 
                     }
                 }
 
+                // Process child relationships (no logging in loop)
                 if (result.data.childRelationships?.length > 0) {
                     for (const childRelationship of result.data.childRelationships) {
                         if (childRelationship.deprecatedAndHidden) continue;
 
-                        if (shouldExcludeObject({
-                            queryable: false,
-                            deprecatedAndHidden: false,
-                            createable: false,
-                            name: childRelationship.childSObject
-                        })) {
+                        if (isSystemObject(childRelationship.childSObject)) {
                             continue;
                         }
 
@@ -122,7 +134,9 @@ async function fetchRelationshipsViaRestApi(instanceUrl, apiVersion, sessionId) 
                             incomingRelationships[sourceObject] = [];
                         }
 
-                        const isMasterDetailRelationship = childRelationship.cascadeDelete === true;
+                        const isMasterDetailRelationship =
+                            childRelationship.cascadeDelete === true &&
+                            childRelationship.restrictedDelete === true;
 
                         incomingRelationships[sourceObject].push({
                             fieldName: childRelationship.field,
@@ -140,13 +154,30 @@ async function fetchRelationshipsViaRestApi(instanceUrl, apiVersion, sessionId) 
             }
         }
 
+        // Summary logging after all processing complete
+        logger.info('[Relationships:fetchREST] Relationship fetch completed', {
+            totalObjects: queryableObjects.length,
+            processedObjects,
+            failedObjects: failedObjects.length,
+            totalRelationships,
+            objectsWithOutgoing: Object.keys(outgoingRelationships).length,
+            objectsWithIncoming: Object.keys(incomingRelationships).length
+        });
+
+        if (failedObjects.length > 0) {
+            logger.warn('[Relationships:fetchREST] Some objects failed to describe', {
+                failedCount: failedObjects.length,
+                failedObjects: failedObjects.map(f => f.objectName).slice(0, 10) // Log first 10
+            });
+        }
+
         return {
             timestamp: Date.now(),
             totalRelationships,
             relationships: { outgoing: outgoingRelationships, incoming: incomingRelationships }
         };
     } catch (error) {
-        logger.error('[Relationships:fetchREST] REST API describe fallback failed', { error: error.message });
+        logger.error('[Relationships:fetchREST] REST API fetch failed', { error: error.message });
         throw error;
     }
 }
@@ -174,10 +205,20 @@ export async function handleFetchAllRelationships(message, sendResponse) {
     if (!forceRefresh) {
         const cached = await getRelationshipCache(cacheKey);
         if (isRelationshipCacheValid(cached)) {
-            logger.info('[Relationships:handleFetch] Returning cached relationships', { count: cached.totalRelationships });
+            const cacheAge = Date.now() - cached.timestamp;
+            const cacheAgeHours = (cacheAge / (1000 * 60 * 60)).toFixed(1);
+            logger.info('[Relationships:handleFetch] Using cached relationships', {
+                totalRelationships: cached.totalRelationships,
+                cacheAgeHours,
+                objectsWithOutgoing: Object.keys(cached.relationships?.outgoing || {}).length,
+                objectsWithIncoming: Object.keys(cached.relationships?.incoming || {}).length
+            });
             sendResponse({ success: true, data: cached, fromCache: true });
             return;
         }
+        logger.info('[Relationships:handleFetch] Cache expired or invalid, fetching fresh data');
+    } else {
+        logger.info('[Relationships:handleFetch] Force refresh requested, fetching fresh data');
     }
 
     try {
@@ -193,9 +234,7 @@ export async function handleFetchAllRelationships(message, sendResponse) {
 
         const version = apiVersion || '66.0';
 
-        logger.info('[Relationships:handleFetch] Starting REST API fetch');
-
-        // Directly use REST API now, no Tooling API fallback logic needed
+        // Fetch relationships
         const relationshipData = await fetchRelationshipsViaRestApi(
             instanceUrl,
             version,
@@ -205,7 +244,9 @@ export async function handleFetchAllRelationships(message, sendResponse) {
         // Store in cache
         await storeRelationshipCache(cacheKey, relationshipData);
 
-        logger.info('[Relationships:handleFetch] Fetch completed');
+        logger.info('[Relationships:handleFetch] Relationships cached successfully', {
+            totalRelationships: relationshipData.totalRelationships
+        });
         sendResponse({ success: true, data: relationshipData, fromCache: false });
 
     } catch (error) {

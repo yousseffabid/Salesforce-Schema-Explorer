@@ -19,8 +19,7 @@ import { isObjectExcluded } from './excludedObjects.js';
  */
 export function isMasterDetailField(field) {
     return field.type === 'reference' && (
-        (field.relationshipOrder !== undefined && field.relationshipOrder !== null) ||
-        field.cascadeDelete === true
+        field.relationshipOrder !== undefined && field.relationshipOrder !== null
     );
 }
 
@@ -131,7 +130,7 @@ function buildRelationshipInfo(relationship, objectApiName, direction) {
             relationshipName: relationship.relationshipName,
             sourceObject: objectApiName,
             isMasterDetail,
-            relationshipOrder: relationship.relationshipOrder // Pass through
+            relationshipOrder: relationship.relationshipOrder
         }
         : {
             fieldName: relationship.fieldName,
@@ -141,64 +140,9 @@ function buildRelationshipInfo(relationship, objectApiName, direction) {
             relationshipName: relationship.relationshipName,
             targetObject: objectApiName,
             isMasterDetail,
-            relationshipOrder: relationship.relationshipOrder // Pass through
+            relationshipOrder: relationship.relationshipOrder
         };
     return { info, isMasterDetail };
-}
-
-/**
- * Extracts relationships for an object from the global Metadata Map.
- * Separates into outgoing/incoming and excluded lists.
- * @param {string} objectApiName - The object to extract for.
- * @returns {Object} Relationship data structure.
- */
-export function extractRelationshipsFromMetadataMap(objectApiName) {
-    const outgoing = { lookup: [], masterDetail: [] };
-    const incoming = { lookup: [], masterDetail: [] };
-    const excludedOutgoing = { lookup: [], masterDetail: [] };
-    const excludedIncoming = { lookup: [], masterDetail: [] };
-
-    const objectEntry = state.objectMetadataMap?.[objectApiName];
-    if (!objectEntry) {
-        logger.warn('[Data:extractMetadataMap] Metadata map not found', { object: objectApiName });
-        return { outgoing, incoming, excludedOutgoing, excludedIncoming };
-    }
-
-    const { relationships } = objectEntry;
-
-    // Extract outgoing relationships from the map
-    if (relationships?.outgoing?.length) {
-        for (const relationship of relationships.outgoing) {
-            if (relationship.targetObject === objectApiName) continue;
-
-            const { info, isMasterDetail } = buildRelationshipInfo(relationship, objectApiName, 'outgoing');
-            const bucket = isMasterDetail ? 'masterDetail' : 'lookup';
-
-            if (isObjectExcluded(relationship.targetObject)) {
-                excludedOutgoing[bucket].push(info);
-                continue;
-            }
-            outgoing[bucket].push(info);
-        }
-    }
-
-    // Extract incoming relationships from the map
-    if (relationships?.incoming?.length) {
-        for (const relationship of relationships.incoming) {
-            if (relationship.sourceObject === objectApiName) continue;
-
-            const { info, isMasterDetail } = buildRelationshipInfo(relationship, objectApiName, 'incoming');
-            const bucket = isMasterDetail ? 'masterDetail' : 'lookup';
-
-            if (isObjectExcluded(relationship.sourceObject)) {
-                excludedIncoming[bucket].push(info);
-                continue;
-            }
-            incoming[bucket].push(info);
-        }
-    }
-
-    return { outgoing, incoming, excludedOutgoing, excludedIncoming };
 }
 
 /**
@@ -268,8 +212,8 @@ export function extractRelationshipsFromMetadata(metadata) {
     for (const field of metadata.fields) {
         if (field.type !== 'reference' || !field.referenceTo?.length) continue;
 
-        // Check for Master-Detail (relationshipOrder is primary, cascadeDelete is fallback)
-        const isMasterDetail = (field.relationshipOrder !== undefined && field.relationshipOrder !== null) || field.cascadeDelete === true;
+        // Strict Master-Detail check based on relationshipOrder.
+        const isMasterDetail = field.relationshipOrder !== undefined && field.relationshipOrder !== null;
 
         for (const targetObject of field.referenceTo) {
             if (targetObject === metadata.name) continue;
@@ -296,6 +240,10 @@ export function extractRelationshipsFromMetadata(metadata) {
 
     return { outgoing, excludedOutgoing };
 }
+
+// =============================================================================
+// URL GENERATION
+// =============================================================================
 
 /**
  * Generates the URL for the object in Object Manager.

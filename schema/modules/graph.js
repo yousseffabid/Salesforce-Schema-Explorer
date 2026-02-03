@@ -28,30 +28,59 @@ export async function buildGraph(mainMetadata) {
     updateLegendCounts();
     updateObjectsCount();
 
-    const activeRelationships = getActiveRelationships();
-    const allRelationships = [...activeRelationships.lookup, ...activeRelationships.masterDetail];
+    // Use Normalized Edges
+    const edgesList = state.edges ? Object.values(state.edges) : [];
+    const totalEdgesInCache = edgesList.length;
 
-    logger.debug('[Graph:build] Building graph', { mainObject: mainMetadata.name, relationshipCount: allRelationships.length });
+    logger.info('[Graph:build] Building graph visualization', {
+        mainObject: mainMetadata.name,
+        totalEdgesInCache,
+        activeView: state.activeRelationshipView,
+        userExcludedCount: state.userExcludedObjects.size
+    });
 
-    // Build the set of related objects, excluding user-excluded and system-excluded
+    // Build the set of related objects from Edges
     const relatedObjects = new Set();
-    for (const relationship of allRelationships) {
-        const objToAdd = relationship.targetObject !== mainMetadata.name
-            ? relationship.targetObject
-            : relationship.sourceObject;
+    const edgesToRender = [];
+    let excludedBySystem = 0;
+    let excludedByUser = 0;
 
-        if (!objToAdd || objToAdd === mainMetadata.name) continue;
+    // Filter relevant edges (connected to Main AND matching active view)
+    for (const edge of edgesList) {
+        // Must be connected to main
+        if (edge.source !== mainMetadata.name && edge.target !== mainMetadata.name) continue;
 
-        // Skip if system-excluded OR user-excluded
-        if (isObjectExcluded(objToAdd)) continue;
-        if (state.userExcludedObjects.has(objToAdd)) continue;
+        // Filter by active relationship view (tab)
+        const isOutgoing = edge.source === mainMetadata.name;
+        const isIncoming = edge.target === mainMetadata.name;
 
-        relatedObjects.add(objToAdd);
+        if (state.activeRelationshipView === 'outgoing' && !isOutgoing) continue;
+        if (state.activeRelationshipView === 'incoming' && !isIncoming) continue;
+        // 'all' shows both outgoing and incoming
+
+        const neighbor = isOutgoing ? edge.target : edge.source;
+
+        if (isObjectExcluded(neighbor)) {
+            excludedBySystem++;
+            continue;
+        }
+        if (state.userExcludedObjects.has(neighbor)) {
+            excludedByUser++;
+            continue;
+        }
+
+        relatedObjects.add(neighbor);
+        edgesToRender.push(edge);
     }
 
-    logger.debug('[Graph:build] Graph scope determined', { relatedObjectCount: relatedObjects.size });
+    logger.info('[Graph:build] Graph scope determined', {
+        relatedObjects: relatedObjects.size,
+        edgesToRender: edgesToRender.length,
+        excludedBySystem,
+        excludedByUser
+    });
 
-    // Fetch metadata for related objects
+    // Fetch metadata for related objects (no logging in Promise.allSettled)
     await Promise.allSettled([...relatedObjects].map(objectName => fetchObjectMetadata(objectName).catch(() => { })));
 
     // Build nodes: main object first, then each related object
@@ -60,9 +89,15 @@ export async function buildGraph(mainMetadata) {
     }];
 
     for (const objectName of relatedObjects) {
-        const objectMetadata = state.metadata.get(objectName);
-        const hasMetadata = objectMetadata !== undefined ||
-            (state.objectMetadataMap?.[objectName] !== undefined);
+        let objectMetadata = state.metadata.get(objectName);
+        const nodeData = state.nodes?.[objectName];
+        let hasMetadata = objectMetadata !== undefined;
+
+        if (!hasMetadata && nodeData) {
+            // Check if it's a shadow node (has no fields)
+            const fieldCount = Object.keys(nodeData.fields || {}).length;
+            hasMetadata = fieldCount > 0;
+        }
 
         nodes.push({
             data: {
@@ -81,61 +116,38 @@ export async function buildGraph(mainMetadata) {
         return true;
     };
 
-    // Build edges
-    const edges = [];
-    let edgeIndex = 0;
+    // Build edges (Cytoscape format)
+    const edges = edgesToRender.map((edge, index) => {
+        const isOutgoing = edge.source === mainMetadata.name;
 
-    for (const relationship of activeRelationships.lookup) {
-        const isOutgoing = relationship.sourceObject === mainMetadata.name;
-        const source = isOutgoing ? mainMetadata.name : relationship.sourceObject;
-        const target = isOutgoing ? relationship.targetObject : mainMetadata.name;
+        let label = 'Lookup';
+        let type = 'lookup';
 
-        if (!shouldIncludeEdge(source, target)) continue;
-
-        edges.push({
-            data: {
-                id: `lookup-${edgeIndex++}`,
-                source,
-                target,
-                label: 'Lookup',
-                relationshipType: 'lookup',
-                direction: isOutgoing ? 'outgoing' : 'incoming'
-            }
-        });
-    }
-
-    for (const relationship of activeRelationships.masterDetail) {
-        const isOutgoing = relationship.sourceObject === mainMetadata.name;
-        const source = isOutgoing ? mainMetadata.name : relationship.sourceObject;
-        const target = isOutgoing ? relationship.targetObject : mainMetadata.name;
-
-        if (!shouldIncludeEdge(source, target)) continue;
-
-        // Determine MD Label (Primary/Secondary)
-        let mdLabel = 'Master-Detail';
-        // Note: relationshipOrder comes from buildObjectMetadataMap
-        // It might be 0 (Primary), 1 (Secondary), or undefined (Fallback/Unknown)
-        if (relationship.relationshipOrder === 0) {
-            mdLabel = 'MD (Primary)';
-        } else if (relationship.relationshipOrder === 1) {
-            mdLabel = 'MD (Secondary)';
-        } else {
-            mdLabel = 'MD'; // Fallback for cascadeDelete proxies
+        if (edge.isMasterDetail) {
+            type = 'masterDetail';
+            if (edge.order === 0) label = 'MD (Primary)';
+            else if (edge.order === 1) label = 'MD (Secondary)';
+            else label = 'MD';
         }
 
-        edges.push({
+        return {
             data: {
-                id: `md-${edgeIndex++}`,
-                source,
-                target,
-                label: mdLabel,
-                relationshipType: 'masterDetail',
+                id: `edge-${index}`,
+                source: edge.source,
+                target: edge.target,
+                label: label,
+                relationshipType: type,
                 direction: isOutgoing ? 'outgoing' : 'incoming'
             }
-        });
-    }
+        };
+    });
 
-    logger.info('[Graph:build] Graph rendered', { nodes: nodes.length, edges: edges.length });
+    logger.info('[Graph:build] Graph visualization rendered', {
+        totalNodes: nodes.length,
+        totalEdges: edges.length,
+        mainObject: mainMetadata.name,
+        relatedObjects: relatedObjects.size
+    });
 
     if (state.cy) state.cy.destroy();
 
@@ -150,12 +162,30 @@ export async function buildGraph(mainMetadata) {
     });
 
     // Interaction listeners
-    state.cy.on('tap', 'node', e => {
+    state.cy.on('tap', 'node', async e => {
         const node = e.target;
-        const hasMetadata = node.data('hasMetadata') === 'true';
-        if (!hasMetadata) return;
+        const objectName = node.id();
 
         hideRelationshipPopover();
+
+        // Lazy Load: Check if we have metadata for this node
+        let hasMetadata = node.data('hasMetadata') === 'true';
+
+        if (!hasMetadata) {
+            // It's a shallow node. Try to fetch metadata for it so we can show details.
+            try {
+                const { fetchObjectMetadata } = await import('./api.js');
+                const metadata = await fetchObjectMetadata(objectName);
+                if (metadata) {
+                    node.data('hasMetadata', 'true');
+                    hasMetadata = true;
+                }
+            } catch (err) {
+                logger.warn('[Graph:tap] Failed to lazy-load metadata for node', { object: objectName });
+            }
+        }
+
+        if (!hasMetadata) return;
 
         const detailsPanel = document.getElementById('details-panel');
         const isPanelOpen = !detailsPanel.classList.contains('hidden');
@@ -238,7 +268,7 @@ export function resetLayout() {
  * Re-runs the graph build process using cached metadata
  */
 export async function refreshGraphVisibility() {
-    if (!state.objectMetadataMap || !state.objectApiName) return;
+    if (!state.objectApiName) return;
 
     const mainMetadata = state.metadata.get(state.objectApiName);
     if (mainMetadata) {

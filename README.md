@@ -56,10 +56,10 @@ No more digging through Object Manager or switching between tabs. See object sch
 - **Center on Main**: Focus on the primary object
 - **Reset Layout**: Recalculate node positions
 
-### 💾 Data & Caching
-
-- **Force Refresh**: Click the reload icon in present in the top right corner of the "Relationships" legend, to clear the 7-day metadata cache and retrieve fresh data
-- **Persistent Preferences**: Your manual object inclusions/exclusions are stored locally and are preserved even after refreshing cache
+- **On-Demand Loading**: Metadata is fetched lazily as you explore. Only the current object and its immediate neighbors are loaded initially, ensuring maximum speed.
+- **Persistent Cache**: Objects are cached in IndexedDB for 7 days, making second loads of the same object instantaneous.
+- **Force Refresh**: Clear the cache via the reload icon in the "Relationships" legend to retrieve fresh metadata.
+- **Persistent Preferences**: Manual object exclusions/inclusions are preserved even after cache refreshes.
 
 ### 📱 Works Everywhere
 
@@ -253,7 +253,7 @@ salesforce-schema-explorer/
 
 - **Documentation**: All JavaScript files include comprehensive inline comments
 - **Security**: XSS prevention, no eval(), CSP compliant
-- **Performance**: Debounced inputs, cached metadata, optimized rendering
+- **Performance**: Lazy-loading strategy, debounced inputs, and cached metadata.
 
 ## Contributing
 

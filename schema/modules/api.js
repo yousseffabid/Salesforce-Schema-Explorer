@@ -83,52 +83,66 @@ export async function fetchLatestApiVersion() {
  * @returns {Promise<Object>} The object metadata.
  */
 export async function fetchObjectMetadata(objectApiName) {
-    // Serve from Object Metadata Map if available
-    if (state.objectMetadataMap && state.objectMetadataMap[objectApiName]) {
-        const mapEntry = state.objectMetadataMap[objectApiName];
+    // Serve from Normalized Nodes if available
+    if (state.nodes && state.nodes[objectApiName]) {
+        const node = state.nodes[objectApiName];
 
-        // Convert map structure to legacy metadata format
-        const fields = Object.values(mapEntry.fields);
-        const metadata = {
-            name: mapEntry.info.name,
-            label: mapEntry.info.label,
-            custom: mapEntry.info.custom,
-            queryable: mapEntry.info.queryable,
-            createable: mapEntry.info.createable,
-            updateable: mapEntry.info.updateable,
-            deletable: mapEntry.info.deletable,
-            keyPrefix: mapEntry.info.keyPrefix,
-            fields
-        };
+        // Check if valid (has fields)
+        if (node.fields && Object.keys(node.fields).length > 0) {
+            const fields = Object.values(node.fields);
+            const metadata = {
+                name: node.info.name,
+                label: node.info.label,
+                custom: node.info.custom,
+                queryable: node.info.queryable,
+                createable: node.info.createable,
+                updateable: node.info.updateable,
+                deletable: node.info.deletable,
+                keyPrefix: node.info.keyPrefix,
+                fields
+            };
 
-        state.metadata.set(objectApiName, metadata);
-        logger.debug('[API:fetchMetadata] Metadata loaded from Metadata Map', { object: objectApiName });
-        return metadata;
+            state.metadata.set(objectApiName, metadata);
+            logger.debug('[API:fetchMetadata] Loaded from graph nodes cache', {
+                object: objectApiName,
+                fieldCount: fields.length
+            });
+            return metadata;
+        } else {
+            logger.debug('[API:fetchMetadata] Shadow node found, fetching full metadata from API', {
+                object: objectApiName
+            });
+        }
     }
 
     if (state.metadata.has(objectApiName)) {
-        logger.debug('[API:fetchMetadata] Metadata loaded from in-memory cache', { object: objectApiName });
-        return state.metadata.get(objectApiName);
+        const cached = state.metadata.get(objectApiName);
+        logger.debug('[API:fetchMetadata] Loaded from in-memory metadata cache', {
+            object: objectApiName,
+            fieldCount: cached.fields?.length || 0
+        });
+        return cached;
     }
 
-    logger.debug('[API:fetchMetadata] Fetching metadata from API', { object: objectApiName });
+    logger.debug('[API:fetchMetadata] Fetching from Salesforce API', { object: objectApiName });
     const url = `${state.instanceUrl}/services/data/v${state.apiVersion}/sobjects/${objectApiName}/describe`;
     const data = await apiCall(url);
     state.metadata.set(objectApiName, data);
-    logger.debug('[API:fetchMetadata] Metadata fetched from API', { object: objectApiName });
+    logger.info('[API:fetchMetadata] Fetched and cached metadata', {
+        object: objectApiName,
+        fieldCount: data.fields?.length || 0
+    });
     return data;
 }
 
 /**
- * Loads the Object Metadata Map, either from cache or by building it.
+ * Loads the normalized graph data (nodes and edges) from cache or backend.
+ * Behavior is non-blocking if data exists in cache.
  * @param {boolean} [forceRefresh=false] - Whether to force a rebuild.
- * @returns {Promise<Object>} The metadata map.
+ * @returns {Promise<Object>} The graph data with nodes and edges.
  */
 export async function loadObjectMetadataMap(forceRefresh = false) {
-    if (state.metadataMapLoading) return state.objectMetadataMap;
-
-    state.metadataMapLoading = true;
-    logger.info('[API:loadMetadataMap] Loading map', { fromCache: !forceRefresh });
+    logger.info('[API:loadMetadataMap] Loading graph data', { fromCache: !forceRefresh });
 
     return new Promise((resolve, reject) => {
         chrome.runtime.sendMessage({
@@ -139,19 +153,76 @@ export async function loadObjectMetadataMap(forceRefresh = false) {
             isSetupDomain: state.isSetupDomain,
             forceRefresh
         }, (response) => {
-            state.metadataMapLoading = false;
-
             if (chrome.runtime.lastError) {
                 reject(new Error(chrome.runtime.lastError.message));
                 return;
             }
 
-            if (response?.success && response.metadataMap) {
-                state.objectMetadataMap = response.metadataMap;
-                logger.info('[API:loadMetadataMap] Map loaded', { count: Object.keys(response.metadataMap).length, fromCache: response.fromCache });
-                resolve(response.metadataMap);
+            if (response?.success && response.nodes) {
+                const nodeCount = Object.keys(response.nodes || {}).length;
+                const edgeCount = Object.keys(response.edges || {}).length;
+                
+                state.nodes = response.nodes;
+                state.edges = response.edges; // Standardized: object format { [edgeId]: edge }
+                
+                logger.info('[API:loadMetadataMap] Graph data loaded', {
+                    source: response.fromCache ? 'cache' : 'API',
+                    nodeCount,
+                    edgeCount,
+                    timestamp: response.timestamp ? new Date(response.timestamp).toISOString() : 'N/A'
+                });
+                resolve({ nodes: response.nodes, edges: response.edges });
             } else {
-                reject(new Error(response?.error || 'Failed to build Object Metadata Map'));
+                reject(new Error(response?.error || 'Failed to load graph data'));
+            }
+        });
+    });
+}
+
+/**
+ * Ensures metadata exists for the given root object and its neighbors.
+ * Triggers a backend fetch if missing.
+ * @param {string} rootObjectName - The object to center the graph on.
+ * @returns {Promise<void>}
+ */
+export async function ensureGraphMetadata(rootObjectName) {
+    if (!rootObjectName) return;
+
+    logger.debug('[API:ensureGraphMetadata] Ensuring metadata for graph', { root: rootObjectName });
+
+    return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({
+            action: 'buildObjectMetadataMap',
+            instanceUrl: state.instanceUrl,
+            apiVersion: state.apiVersion,
+            sessionId: state.sessionId,
+            isSetupDomain: state.isSetupDomain,
+            rootObjectName,
+            forceRefresh: false
+        }, (response) => {
+            if (chrome.runtime.lastError) {
+                logger.error('[API:ensureGraphMetadata] Runtime error', { error: chrome.runtime.lastError.message });
+                reject(new Error(chrome.runtime.lastError.message));
+                return;
+            }
+
+            if (response?.success && response.nodes) {
+                const nodeCount = Object.keys(response.nodes).length;
+                const edgeCount = Object.keys(response.edges || {}).length;
+                
+                // Update our local state with the enriched map
+                state.nodes = response.nodes;
+                state.edges = response.edges;
+                
+                logger.info('[API:ensureGraphMetadata] Graph metadata ensured', {
+                    rootObject: rootObjectName,
+                    source: response.fromCache ? 'cache' : 'API',
+                    nodeCount,
+                    edgeCount
+                });
+                resolve();
+            } else {
+                reject(new Error(response?.error || 'Failed to ensure graph metadata'));
             }
         });
     });
@@ -173,7 +244,10 @@ export async function clearObjectMetadataCache() {
             }
 
             if (response?.success) {
-                state.objectMetadataMap = null;
+                // Clear normalized graph data
+                state.nodes = {};
+                state.edges = {};
+                state.metadata.clear();
                 logger.info('[API:clearMetadataCache] Cache cleared');
                 resolve();
             } else {
@@ -218,7 +292,17 @@ export async function loadRelationshipCache(forceRefresh = false, updateUI = tru
 
             if (response?.success && response.data) {
                 state.relationshipCache = response.data;
-                logger.info('[API:loadRelationshipCache] Cache loaded', { count: response.data.totalRelationships });
+                const cacheAge = response.fromCache ? Date.now() - response.data.timestamp : 0;
+                const cacheAgeHours = response.fromCache ? (cacheAge / (1000 * 60 * 60)).toFixed(1) : 0;
+                
+                logger.info('[API:loadRelationshipCache] Relationship cache loaded', {
+                    source: response.fromCache ? 'cache' : 'API',
+                    totalRelationships: response.data.totalRelationships,
+                    cacheAgeHours: response.fromCache ? cacheAgeHours : 'N/A',
+                    objectsWithOutgoing: Object.keys(response.data.relationships?.outgoing || {}).length,
+                    objectsWithIncoming: Object.keys(response.data.relationships?.incoming || {}).length
+                });
+                
                 if (updateUI) {
                     completeLoadingOperation(response.data.timestamp, response.fromCache);
                 }

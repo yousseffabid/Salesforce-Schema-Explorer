@@ -19,7 +19,8 @@ This document describes the message-passing API between content scripts, UI page
   apiVersion: '66.0',                                   // Required
   sessionId: 'session_id_string',                       // Required for setup domains
   isSetupDomain: false,                                 // Required
-  forceRefresh: false                                   // Optional, default false
+  forceRefresh: false,                                  // Optional, default false
+  rootObjectName: 'Account'                             // Optional. Triggers lazy-load for root + neighbors
 }
 ```
 
@@ -28,7 +29,7 @@ This document describes the message-passing API between content scripts, UI page
 ```javascript
 {
   success: true,
-  metadataMap: {
+  nodes: {
     'Account': {
       info: {
         name: 'Account',
@@ -42,34 +43,20 @@ This document describes the message-passing API between content scripts, UI page
       },
       fields: {
         'Id': { name: 'Id', label: 'Account ID', type: 'id', ... },
-        'Name': { name: 'Name', label: 'Account Name', type: 'string', length: 255, ... },
-        'ParentId': { name: 'ParentId', label: 'Parent Account ID', type: 'reference', referenceTo: ['Account'], ... }
-      },
-      relationships: {
-        outgoing: [
-          {
-            fieldName: 'ParentId',
-            fieldLabel: 'Parent Account ID',
-            targetObject: 'Account',
-            relationshipName: 'Parent',
-            sourceObject: 'Account',
-            isMasterDetail: false
-          }
-        ],
-        incoming: [
-          {
-            fieldName: 'ParentId',
-            fieldLabel: 'Parent Account ID',
-            sourceObject: 'Account',
-            sourceLabel: 'Account',
-            relationshipName: 'Parent',
-            targetObject: 'Account',
-            isMasterDetail: false
-          }
-        ]
+        'Name': { name: 'Name', label: 'Account Name', type: 'string', ... },
+        'ParentId': { name: 'ParentId', label: 'Parent Account ID', type: 'reference', ... }
       }
     },
     // ... more objects
+  },
+  edges: {
+    'Account-Contact-ReportsToId': {
+      id: 'Account-Contact-ReportsToId',
+      source: 'Account',
+      target: 'Contact',
+      fieldName: 'ReportsToId',
+      isMasterDetail: false
+    }
   },
   fromCache: true,                                      // true if served from IndexedDB
   timestamp: 1674567890123                              // Cache timestamp
@@ -85,19 +72,17 @@ This document describes the message-passing API between content scripts, UI page
 }
 ```
 
-**Behavior**:
-
-1. First call: Builds fresh metadata map by calling describeGlobal and batching /describe calls
-2. Subsequent calls (within 7 days): Returns cached map from IndexedDB
-3. With `forceRefresh: true`: Ignores cache and rebuilds fresh metadata
-4. Errors: Returns single error message, doesn't throw exceptions
-5. Timeout: May take 30-60 seconds for large orgs on first call
+1. **Lazy Loading**: If `rootObjectName` is present, it fetches only that object and its neighbors (incoming/outgoing).
+2. **Delta Updates**: Only missing objects are added to the fetch queue; existing cache entries are preserved and merged.
+3. **Persistance**: Results are merged into the IndexedDB store for 7-day persistence.
+4. **Normalized Storage**: Data is split into `nodes` (metadata) and `edges` (relationships) for efficient graph traversal.
+5. **Efficiency**: Startup is instant (<1s) for cached data.
 
 **Cache Invalidation**:
 
-- 7-day TTL (configurable in background.js)
+- 7-day TTL (configurable in `background/modules/cache.js`)
 - Manual refresh via `clearMetadataCache` message
-- Auto-reloads on user request or settings change
+- Auto-reloads on user request or manual refresh button
 
 ---
 
@@ -198,71 +183,6 @@ This document describes the message-passing API between content scripts, UI page
 
 ---
 
-### fetchAllRelationships
-
-**Purpose**: Fetch and cache all relationships from Tooling API
-
-**Request**:
-
-```javascript
-{
-  action: 'fetchAllRelationships',
-  instanceUrl: 'https://myorg.my.salesforce.com',
-  apiVersion: '66.0',
-  sessionId: 'session_id_string',
-  isSetupDomain: false,
-  forceRefresh: false
-}
-```
-
-**Response**:
-
-```javascript
-{
-  success: true,
-  data: {
-    relationships: {
-      outgoing: {
-        'Account': [ /* relationships where Account is source */ ],
-        'Contact': [ /* relationships where Contact is source */ ]
-      },
-      incoming: {
-        'Account': [ /* relationships where Account is target */ ],
-        'Contact': [ /* relationships where Contact is target */ ]
-      }
-    },
-    totalRelationships: 1234,
-    timestamp: 1674567890123
-  },
-  fromCache: true
-}
-```
-
----
-
-### invalidateRelationshipCache
-
-**Purpose**: Clear cached relationships
-
-**Request**:
-
-```javascript
-{
-  action: 'invalidateRelationshipCache',
-  instanceUrl: 'https://myorg.my.salesforce.com'
-}
-```
-
-**Response**:
-
-```javascript
-{
-  success: true;
-}
-```
-
----
-
 ### resolveObjectId
 
 **Purpose**: Convert custom object DurableId to API name
@@ -355,13 +275,14 @@ async function loadMetadata() {
         (response) => {
           if (chrome.runtime.lastError)
             reject(new Error(chrome.runtime.lastError.message));
-          else if (response?.success) resolve(response.metadataMap);
+          else if (response?.success) resolve(response);
           else reject(new Error(response?.error || "Failed to load metadata"));
         },
       );
     });
 
-    state.objectMetadataMap = response;
+    state.nodes = response.nodes;
+    state.edges = response.edges;
   } catch (error) {
     console.error("Metadata load failed:", error);
   }
@@ -371,12 +292,11 @@ async function loadMetadata() {
 ### Get metadata for specific object
 
 ```javascript
-// From state.objectMetadataMap (instant):
-const objectEntry = state.objectMetadataMap["Account"];
-const fields = objectEntry.fields;
-const relationships = objectEntry.relationships;
+// From state.nodes (instant):
+const objectNode = state.nodes["Account"];
+const fields = objectNode.fields;
 
-// Serve fields:
+// List fields:
 for (const [fieldName, field] of Object.entries(fields)) {
   console.log(`${field.label} (${field.type})`);
 }
@@ -413,13 +333,14 @@ async function refreshMetadata() {
           forceRefresh: true,
         },
         (response) => {
-          if (response?.success) resolve(response.metadataMap);
+          if (response?.success) resolve(response);
           else reject(new Error(response?.error));
         },
       );
     });
 
-    state.objectMetadataMap = response;
+    state.nodes = response.nodes;
+    state.edges = response.edges;
   } catch (error) {
     console.error("Refresh failed:", error);
   }
@@ -428,11 +349,9 @@ async function refreshMetadata() {
 
 ---
 
-## Performance Notes
-
-- **First load**: 30-60 seconds for org with 1000+ objects (once per 7 days)
-- **Cache hits**: <1ms lookup from IndexedDB
-- **In-memory access**: <0.1ms once loaded
-- **Batch size**: 15 objects per parallel batch (optimized for browser concurrency)
-- **Rate limiting**: 100ms delay between batches
-- **Memory**: ~50-100KB per 100 objects (after stripping unused fields)
+- **First load (Search)**: Instant (DescribeGlobal only).
+- **First load (Schema)**: 1-2 seconds per new object (Root + neighbors).
+- **Cache hits**: <5ms lookup from IndexedDB.
+- **In-memory access**: <0.1ms once loaded.
+- **Scalability**: Handles 5000+ objects by only loading the visible "Graph Context".
+- **Memory**: Strips unused fields to keep IndexedDB growth linear (~50KB per unique explored object).

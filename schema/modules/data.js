@@ -116,7 +116,6 @@ export function getFieldTypeCategory(field) {
     return categoryMap[field.type?.toLowerCase()] || field.type || 'Other';
 }
 
-// =============================================================================
 
 // =============================================================================
 // URL GENERATION

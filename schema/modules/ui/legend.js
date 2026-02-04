@@ -53,15 +53,6 @@ export function updateRelationshipTabs() {
     if (elements.tabIncomingCount) elements.tabIncomingCount.textContent = `${incomingCounts.visible} / ${incomingCounts.total}`;
     if (elements.tabAllCount) elements.tabAllCount.textContent = `${allCounts.visible} / ${allCounts.total}`;
 
-    // We implicitly don't support "excluded relationships" count in the old way accurately without iterating exclusions.
-    // For now, let's assume if total > visible, we show the section.
-    const hasExcluded = (allCounts.total - allCounts.visible) > 0;
-
-    const excludedSection = document.getElementById('legend-excluded-section');
-    if (excludedSection) {
-        excludedSection.style.display = 'block'; // Always block? Logic was weird before.
-    }
-
     updateActiveTab();
 }
 
@@ -101,7 +92,6 @@ export function getActiveRelationships() {
         else if (state.activeRelationshipView === 'all' && (isOutgoing || isIncoming)) include = true;
 
         if (include) {
-            // Create legacy-like structure for consumption
             const rel = {
                 ...edge,
                 sourceObject: edge.source,
@@ -149,7 +139,6 @@ export function updateObjectsCount() {
 
     // Get ALL known related objects (including user-excluded AND system-excluded)
     const allObjects = getRelatedObjectsList(false); // system exclusion is handled in edge logic now
-    // Actually, getRelatedObjectsList needs to rely on Edges now.
     const totalCount = allObjects.length;
 
     // Visible = Total - (UserExcluded + SystemExcluded)

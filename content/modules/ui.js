@@ -65,11 +65,6 @@ window.SFSchema = window.SFSchema || {};
             event.stopPropagation();
         }
 
-        if (!floatingButton && event.target !== floatingButton) {
-            // If called programmatically without button, might need handling
-            // But logic below assumes floatingButton exists for loading state
-        }
-
         if (floatingButton) {
             floatingButton.disabled = true;
             floatingButton.classList.add('sfschema-loading');

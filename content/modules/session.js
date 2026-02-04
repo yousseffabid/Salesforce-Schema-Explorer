@@ -37,7 +37,7 @@ window.SFSchema = window.SFSchema || {};
     /**
      * Extracts session ID from cookies.
      * @returns {string|null} Session ID or null.
-    */
+     */
     function getSessionIdFromCookie() {
         try {
             const cookies = document.cookie.split(';');
@@ -57,7 +57,7 @@ window.SFSchema = window.SFSchema || {};
     /**
      * Extracts session ID from the page context (meta tags, URL hash, inline scripts).
      * @returns {string|null} Session ID or null.
-    */
+     */
     function getSessionIdFromPage() {
         try {
             // Method 1: Meta tags
@@ -100,7 +100,7 @@ window.SFSchema = window.SFSchema || {};
 
     /**
      * Injects the session extractor script into the page.
-    */
+     */
     function injectSessionExtractor() {
         try {
             // Create a communication element if it doesn't exist

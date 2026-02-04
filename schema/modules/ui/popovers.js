@@ -279,7 +279,7 @@ export function showRelationshipPopover(type) {
     const activeRelationships = getActiveRelationships(); // Only active (visible) relationships
     let relationships = type === 'lookup' ? activeRelationships.lookup : activeRelationships.masterDetail;
 
-    // Filter by visibility (must match the Count logic)
+    // Filter by visibility
     relationships = relationships.filter(rel => {
         const partner = rel.targetObject === state.objectApiName ? rel.sourceObject : rel.targetObject;
         if (!partner || partner === state.objectApiName) return false;

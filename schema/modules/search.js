@@ -190,9 +190,6 @@ export function clearSchema() {
     state.relationships = { outgoing: { lookup: [], masterDetail: [] }, incoming: { lookup: [], masterDetail: [] } };
     state.excludedRelationships = { outgoing: { lookup: [], masterDetail: [] }, incoming: { lookup: [], masterDetail: [] } };
 
-    const excludedSection = document.getElementById('legend-excluded-section');
-    if (excludedSection) excludedSection.style.display = 'none';
-
     hideDetailsPanel();
     hideRelationshipPopover();
     showEmptyState();

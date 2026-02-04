@@ -29,10 +29,10 @@ export async function batchFetchObjectMetadata(instanceUrl, apiVersion, objectNa
     const failedObjects = [];
 
     const totalBatches = Math.ceil(objectNames.length / METADATA_BATCH_SIZE);
-    logger.info('[Metadata:batchFetch] Starting metadata fetch', { 
-        totalObjects: objectNames.length, 
+    logger.info('[Metadata:batchFetch] Starting metadata fetch', {
+        totalObjects: objectNames.length,
         batchSize: METADATA_BATCH_SIZE,
-        totalBatches 
+        totalBatches
     });
 
     for (let i = 0; i < objectNames.length; i += METADATA_BATCH_SIZE) {
@@ -48,14 +48,14 @@ export async function batchFetchObjectMetadata(instanceUrl, apiVersion, objectNa
                 isSetupDomain
             ).then(metadata => ({ objectName, metadata, success: true }))
                 .catch(error => {
-                    // Collect failures for summary logging (no logging in loop)
+                    // Collect failures for summary logging
                     return { objectName, metadata: null, success: false, error: error.message };
                 })
         );
 
         const results = await Promise.all(batchPromises);
-        
-        // Process results without logging in loop
+
+        // Process results
         results.forEach(result => {
             if (result.success && result.metadata) {
                 metadataMap[result.objectName] = result.metadata;

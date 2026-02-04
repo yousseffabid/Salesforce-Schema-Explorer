@@ -8,7 +8,6 @@
 import { logger, isSalesforceUrl } from './modules/utils.js';
 import { fetchWithRetry, MAX_RETRY_ATTEMPTS } from './modules/api.js';
 import { extractSessionIdFromCookies } from './modules/auth.js';
-
 import { handleBuildObjectMetadataMap, handleClearMetadataCache } from './modules/metadata.js';
 
 // =============================================================================

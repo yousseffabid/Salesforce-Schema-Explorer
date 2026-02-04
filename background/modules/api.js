@@ -104,7 +104,7 @@ export async function fetchWithRetry(url, retriesLeft, sessionId = null, isSetup
         return await response.json();
 
     } catch (error) {
-        // Handle network errors (e.g., no internet, DNS failure)
+        // Handle network errors (no internet, DNS failure,...)
         if (error.name === 'TypeError' && retriesLeft > 1) {
             logger.warn('[API:fetchWithRetry] Network error encountered', { error: error.message, retriesLeft: retriesLeft - 1 });
             // Pass original URL to retry logic, it will call us back

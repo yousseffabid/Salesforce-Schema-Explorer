@@ -64,7 +64,7 @@ export function stripMetadataFields(metadata) {
  */
 export function buildObjectMetadataMap(metadataMap) {
     const nodes = {};
-    const edges = {}; // Standardized: object format { [edgeId]: edge }
+    const edges = {};
 
     // Pass 1: Create nodes and extract outgoing edges
     for (const [objectName, metadata] of Object.entries(metadataMap)) {

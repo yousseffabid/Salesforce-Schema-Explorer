@@ -4,7 +4,7 @@
 
 window.SFSchema = window.SFSchema || {};
 
-(function (NS) {
+(function(NS) {
     'use strict';
 
     const Utils = NS.Utils;
@@ -84,7 +84,7 @@ window.SFSchema = window.SFSchema || {};
 
             Utils.Logger.debug('[UI:Message] Sending openSchemaTab message to background');
             const instanceUrl = Utils.getInstanceUrl();
-            const sessionId = Session.getSessionId();
+            const sessionId = await Session.getSessionId();
             const isSetupDomain = Utils.isSetupDomain();
 
             Utils.Logger.debug('[UI:MessagePayload]', { instanceUrl, objectApiName: objectInfo?.apiName || 'null' });

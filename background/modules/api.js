@@ -23,12 +23,19 @@ export const RETRYABLE_STATUS_CODES = new Set([408, 429, 500, 502, 503, 504]);
  * @returns {string} The normalized hostname (e.g., my.salesforce.com)
  */
 export function getMyDomain(host) {
-    if (host) {
-        return host
-            .replace(/\.lightning\.force\./, ".my.salesforce.") // avoid HTTP redirect
-            .replace(/\.mcas\.ms$/, ""); // remove Microsoft Defender suffix
-    }
-    return host;
+    if (!host) return host;
+
+    let normalized = host.toLowerCase();
+
+    // 1. Handle Lightning to MyDomain pivot
+    // lightning.force.com -> my.salesforce.com
+    // sandbox.lightning.force.com -> sandbox.my.salesforce.com
+    normalized = normalized.replace(/\.lightning\.force\.com$/, ".my.salesforce.com");
+
+    // 2. Remove Microsoft Defender for Cloud Apps suffix
+    normalized = normalized.replace(/\.mcas\.ms$/, "");
+
+    return normalized;
 }
 
 /**

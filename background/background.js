@@ -7,8 +7,19 @@
 
 import { logger, isSalesforceUrl } from './modules/utils.js';
 import { fetchWithRetry, MAX_RETRY_ATTEMPTS } from './modules/api.js';
-import { extractSessionIdFromCookies } from './modules/auth.js';
+import { sessionManager } from './modules/session.js';
 import { handleBuildObjectMetadataMap, handleClearMetadataCache } from './modules/metadata.js';
+
+// =============================================================================
+// SESSION MANAGEMENT
+// =============================================================================
+
+/**
+ * Simple session extraction wrapper
+ */
+async function getSessionId(instanceUrl) {
+  return await sessionManager.getSessionId(instanceUrl);
+}
 
 // =============================================================================
 // MESSAGE LISTENER
@@ -45,6 +56,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     case 'clearMetadataCache':
       handleClearMetadataCache(message, sendResponse);
+      return true;
+
+    case 'getSessionId':
+      handleGetSessionId(message, sendResponse);
       return true;
 
     default:
@@ -138,7 +153,7 @@ async function handleFetchApi(message, sendResponse) {
   }
 
   try {
-    const sessionId = await extractSessionIdFromCookies(instanceUrl || url);
+    const sessionId = message.sessionId || await getSessionId(instanceUrl || url);
 
     if (!sessionId) {
       sendResponse({
@@ -175,7 +190,7 @@ async function handleResolveObjectId(message, sendResponse) {
   }
 
   try {
-    const sessionId = await extractSessionIdFromCookies(instanceUrl);
+    const sessionId = message.sessionId || await getSessionId(instanceUrl);
 
     if (!sessionId) {
       sendResponse({
@@ -229,7 +244,7 @@ async function handleFetchSObjects(message, sendResponse) {
   }
 
   try {
-    const sessionId = await extractSessionIdFromCookies(instanceUrl);
+    const sessionId = message.sessionId || await getSessionId(instanceUrl);
 
     if (!sessionId) {
       sendResponse({
@@ -275,6 +290,25 @@ async function handleFetchSObjects(message, sendResponse) {
       success: false,
       error: error.message
     });
+  }
+}
+
+/**
+ * Handles session ID requests from content scripts.
+ */
+async function handleGetSessionId(message, sendResponse) {
+  const { instanceUrl } = message;
+
+  if (!instanceUrl) {
+    sendResponse({ success: false, error: 'Missing instanceUrl' });
+    return;
+  }
+
+  try {
+    const sessionId = await getSessionId(instanceUrl);
+    sendResponse({ success: true, sessionId });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
   }
 }
 

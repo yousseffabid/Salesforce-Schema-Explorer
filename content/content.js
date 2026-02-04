@@ -3,7 +3,7 @@
  * Orchestrates the initialization of the content script using modular components.
  */
 
-(function () {
+(function() {
   'use strict';
 
   // Namespace references
@@ -47,7 +47,7 @@
 
   /**
      * Initializes the content script.
-     * verfies domain, injects extractor, sets up UI and listeners.
+     * Verifies domain, initializes session manager, sets up UI and listeners.
      */
   function init() {
     // Verify we're on a Salesforce domain
@@ -56,8 +56,12 @@
       return;
     }
 
-    // Inject session extractor
-    Session.injectSessionExtractor();
+    // Initialize session manager
+    Session.initialize().then(() => {
+      Utils.Logger.debug('[Content:Init] Session manager initialized');
+    }).catch(error => {
+      Utils.Logger.error('[Content:Init] Session manager initialization failed', { error: error.message });
+    });
 
     // Create button if on a valid page
     UI.updateButtonVisibility();

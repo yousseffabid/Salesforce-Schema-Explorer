@@ -22,8 +22,9 @@ The extension uses the following browser storage mechanisms:
 - **IndexedDB**: Caches Salesforce object metadata and relationship mapping for 7 days. [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/background/modules/cache.js)
 - **chrome.storage.session**: Temporarily stores session context (cleared when the browser session ends). [View the code](https://github.com/yousseffabid/Salesforce-Schema-Explorer/blob/main/background/background.js)
 
-You can inspect what is stored in your browser by following [this Chrome DevTools tutorial](https://developer.chrome.com/docs/devtools/storage/localstorage).
+You can inspect what is stored in your browser's local storage by following [this Chrome DevTools tutorial](https://developer.chrome.com/docs/devtools/storage/localstorage).
 
+You can inspect what is stored in your browser's IndexedDB by following [this Chrome DevTools tutorial](https://developer.chrome.com/docs/devtools/storage/indexeddb).
 
 ## 4. Third Parties
 We do not share any information with third parties. No data is sent to external servers.

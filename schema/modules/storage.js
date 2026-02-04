@@ -68,22 +68,3 @@ export function loadObjectExclusions(rootObjectName) {
     return new Set();
 }
 
-/**
- * Clear all stored preferences
- */
-export function clearAllPreferences() {
-    try {
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key.startsWith(STORAGE_PREFIX)) {
-                keysToRemove.push(key);
-            }
-        }
-
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        logger.info('[Storage:clearPreferences] Preferences cleared', { count: keysToRemove.length });
-    } catch (e) {
-        logger.error('[Storage:clearPreferences] Clear failed', { error: e.message });
-    }
-}

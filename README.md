@@ -211,28 +211,57 @@ The extension uses standard Salesforce REST APIs:
 
 ```
 salesforce-schema-explorer/
-├── manifest.json          # Extension configuration
+├── manifest.json              # Extension configuration
 ├── background/
-│   ├── background.js      # Service worker entry point
-│   └── modules/           # API, Auth, Cache, Metadata, Utils
+│   ├── background.js          # Service worker entry point
+│   └── modules/
+│       ├── api.js             # Salesforce API wrapper
+│       ├── auth.js            # Session token extraction
+│       ├── cache.js           # IndexedDB caching layer
+│       ├── metadata.js        # Metadata module entry point
+│       ├── metadata/          # Metadata processing
+│       │   ├── config.js      # Metadata configuration
+│       │   ├── fetch.js       # Metadata fetching logic
+│       │   ├── handlers.js    # Message handlers
+│       │   └── transform.js   # Data transformation utilities
+│       ├── relationships.js   # Relationship extraction logic
+│       └── utils.js           # General utilities
 ├── content/
-│   ├── content.js         # Content script entry point
-│   ├── content.css        # Styles for injected UI
-│   ├── modules/           # Session, UI, URL, Utils
-│   └── resources/         # Isolate script injection (Session Extractor)
+│   ├── content.js             # Content script entry point
+│   ├── content.css            # Styles for injected UI
+│   ├── modules/
+│   │   ├── session.js         # Session management
+│   │   ├── ui.js              # UI injection logic
+│   │   ├── url.js             # URL parsing utilities
+│   │   └── utils.js           # Content script utilities
+│   └── resources/             # Isolate script injection (Session Extractor)
 ├── schema/
-│   ├── schema.html        # Main extension page
-│   ├── schema.js          # Main application entry point
-│   ├── schema.css         # Comprehensive styles
-│   ├── cytoscape.min.js   # Graph visualization library
-│   └── modules/           # Modularized application logic
-│       ├── api.js         # API interactions
-│       ├── data.js        # Data processing and utilities
-│       ├── graph.js       # Graph visualization logic
-│       ├── state.js       # Centralized state management
-│       └── ui/            # UI Components (Details, Filters, Legend, etc.)
-├── icons/                 # Extension icons (16, 32, 48, 128)
-└── README.md              # Project documentation
+│   ├── schema.html            # Main extension page
+│   ├── schema.js              # Main application entry point
+│   ├── schema.css             # Comprehensive styles
+│   ├── cytoscape.min.js       # Graph visualization library
+│   └── modules/
+│       ├── api.js             # API interactions
+│       ├── data.js            # Data processing and utilities
+│       ├── event-listeners.js # DOM event handlers
+│       ├── excludedObjects.js # Object exclusion management
+│       ├── graph.js           # Graph visualization logic
+│       ├── search.js          # Search functionality
+│       ├── state.js           # Centralized state management
+│       ├── storage.js         # Local storage utilities
+│       ├── ui.js              # UI module entry point
+│       ├── utils.js           # General utilities
+│       └── ui/                # UI Components
+│           ├── core.js        # Core UI functionality
+│           ├── details.js     # Field details panel
+│           ├── filters.js     # Filter controls
+│           ├── legend.js      # Graph legend
+│           └── popovers.js    # Popover components
+├── icons/                     # Extension icons (16, 32, 48, 128)
+├── API.md                     # API documentation
+├── PRIVACY.md                 # Privacy policy
+├── LICENSE                    # MIT License
+└── README.md                  # Project documentation
 ```
 
 ## Development

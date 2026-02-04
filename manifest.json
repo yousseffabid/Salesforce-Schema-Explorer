@@ -62,7 +62,6 @@
         "schema/schema.css",
         "schema/schema.js",
         "schema/cytoscape.min.js",
-        "content/resources/session-extractor.js",
         "icons/*"
       ],
       "matches": [

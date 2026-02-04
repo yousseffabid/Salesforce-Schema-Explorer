@@ -224,7 +224,6 @@ salesforce-schema-explorer/
 │       │   ├── fetch.js       # Metadata fetching logic
 │       │   ├── handlers.js    # Message handlers
 │       │   └── transform.js   # Data transformation utilities
-│       ├── relationships.js   # Relationship extraction logic
 │       └── utils.js           # General utilities
 ├── content/
 │   ├── content.js             # Content script entry point

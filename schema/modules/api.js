@@ -161,10 +161,10 @@ export async function loadObjectMetadataMap(forceRefresh = false) {
             if (response?.success && response.nodes) {
                 const nodeCount = Object.keys(response.nodes || {}).length;
                 const edgeCount = Object.keys(response.edges || {}).length;
-                
+
                 state.nodes = response.nodes;
                 state.edges = response.edges; // Standardized: object format { [edgeId]: edge }
-                
+
                 logger.info('[API:loadMetadataMap] Graph data loaded', {
                     source: response.fromCache ? 'cache' : 'API',
                     nodeCount,
@@ -209,11 +209,11 @@ export async function ensureGraphMetadata(rootObjectName) {
             if (response?.success && response.nodes) {
                 const nodeCount = Object.keys(response.nodes).length;
                 const edgeCount = Object.keys(response.edges || {}).length;
-                
+
                 // Update our local state with the enriched map
                 state.nodes = response.nodes;
                 state.edges = response.edges;
-                
+
                 logger.info('[API:ensureGraphMetadata] Graph metadata ensured', {
                     rootObject: rootObjectName,
                     source: response.fromCache ? 'cache' : 'API',
@@ -257,80 +257,3 @@ export async function clearObjectMetadataCache() {
     });
 }
 
-/**
- * Loads the relationship cache in the background.
- * @param {boolean} [forceRefresh=false] - Whether to force a refresh.
- * @param {boolean} [updateUI=true] - Whether to show loading UI.
- * @returns {Promise<Object>} The relationship cache data.
- */
-export async function loadRelationshipCache(forceRefresh = false, updateUI = true) {
-    if (state.relationshipCacheLoading) return;
-
-    state.relationshipCacheLoading = true;
-    if (updateUI) {
-        logger.debug('[API:loadRelationshipCache] Called with updateUI=true');
-        startLoadingOperation();
-    }
-
-    return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({
-            action: 'fetchAllRelationships',
-            instanceUrl: state.instanceUrl,
-            apiVersion: state.apiVersion,
-            sessionId: state.sessionId,
-            isSetupDomain: state.isSetupDomain,
-            forceRefresh
-        }, (response) => {
-            state.relationshipCacheLoading = false;
-
-            if (chrome.runtime.lastError) {
-                logger.error('[API:loadRelationshipCache] Runtime error', { error: chrome.runtime.lastError.message });
-                if (updateUI) completeLoadingOperation();
-                reject(new Error(chrome.runtime.lastError.message));
-                return;
-            }
-
-            if (response?.success && response.data) {
-                state.relationshipCache = response.data;
-                const cacheAge = response.fromCache ? Date.now() - response.data.timestamp : 0;
-                const cacheAgeHours = response.fromCache ? (cacheAge / (1000 * 60 * 60)).toFixed(1) : 0;
-                
-                logger.info('[API:loadRelationshipCache] Relationship cache loaded', {
-                    source: response.fromCache ? 'cache' : 'API',
-                    totalRelationships: response.data.totalRelationships,
-                    cacheAgeHours: response.fromCache ? cacheAgeHours : 'N/A',
-                    objectsWithOutgoing: Object.keys(response.data.relationships?.outgoing || {}).length,
-                    objectsWithIncoming: Object.keys(response.data.relationships?.incoming || {}).length
-                });
-                
-                if (updateUI) {
-                    completeLoadingOperation(response.data.timestamp, response.fromCache);
-                }
-                resolve(response.data);
-            } else {
-                logger.error('[API:loadRelationshipCache] Load failed', { error: response?.error });
-                if (updateUI) completeLoadingOperation();
-                reject(new Error(response?.error || 'Failed to load relationship cache'));
-            }
-        });
-    });
-}
-
-/**
- * Invalidates the relationship cache in the background.
- * @returns {Promise<void>}
- */
-export async function refreshRelationshipCache() {
-    return new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage({
-            action: 'invalidateRelationshipCache',
-            instanceUrl: state.instanceUrl
-        }, (response) => {
-            if (response?.success) {
-                resolve();
-            } else {
-                reject(new Error(response?.error || 'Failed to invalidate cache'));
-            }
-        });
-    });
-}

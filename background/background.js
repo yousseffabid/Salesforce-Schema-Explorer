@@ -8,7 +8,7 @@
 import { logger, isSalesforceUrl } from './modules/utils.js';
 import { fetchWithRetry, MAX_RETRY_ATTEMPTS } from './modules/api.js';
 import { extractSessionIdFromCookies } from './modules/auth.js';
-import { handleFetchAllRelationships, handleInvalidateRelationshipCache } from './modules/relationships.js';
+
 import { handleBuildObjectMetadataMap, handleClearMetadataCache } from './modules/metadata.js';
 
 // =============================================================================
@@ -39,13 +39,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       handleFetchSObjects(message, sendResponse);
       return true;
 
-    case 'fetchAllRelationships':
-      handleFetchAllRelationships(message, sendResponse);
-      return true;
-
-    case 'invalidateRelationshipCache':
-      handleInvalidateRelationshipCache(message, sendResponse);
-      return true;
 
     case 'buildObjectMetadataMap':
       handleBuildObjectMetadataMap(message, sendResponse);

@@ -18,8 +18,6 @@ export const state = {
     nodes: {},
     edges: {},
 
-    // Relationship Cache (from Tooling API)
-    relationshipCache: null,
 
     // User-excluded objects (Set of object API names)
     userExcludedObjects: new Set(),

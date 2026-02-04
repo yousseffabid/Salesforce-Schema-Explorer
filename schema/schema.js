@@ -11,9 +11,7 @@ import {
   fetchSObjects,
   fetchLatestApiVersion,
   loadObjectMetadataMap,
-  loadRelationshipCache,
   fetchObjectMetadata,
-  refreshRelationshipCache,
   clearObjectMetadataCache
 } from './modules/api.js';
 import {
@@ -115,14 +113,14 @@ async function handleCacheRefresh() {
     startLoadingOperation();
 
     // Clear caches and state before reloading.
-    await refreshRelationshipCache();
+
     await clearObjectMetadataCache();
 
     // Clear normalized graph data (already cleared by clearObjectMetadataCache, but explicit for clarity)
     state.nodes = {};
     state.edges = {};
     state.metadata.clear();
-    state.relationshipCache = null;
+
 
     window.location.reload();
 

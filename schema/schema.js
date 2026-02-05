@@ -45,6 +45,11 @@ import { setupEventListeners } from './modules/event-listeners.js';
  * @returns {Promise<void>}
  */
 async function loadObjectSchema(objectApiName) {
+  // Clear stale state immediately to prevent leakage across objects
+  state.userExcludedObjects = new Set();
+  state.nodes = {};
+  state.edges = {};
+
   showLoading();
 
   try {

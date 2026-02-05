@@ -119,7 +119,7 @@ function processOutgoingRelationships(objectName, strippedMetadata) {
                 if (targetObject === objectName) continue;
 
                 outgoingEdges.push({
-                    id: `${objectName}.${field.name}`, // Unique Edge ID
+                    id: `${objectName}.${field.name}.${targetObject}`, // Unique Edge ID including target
                     source: objectName,
                     sourceLabel: strippedMetadata.label,
                     target: targetObject,
@@ -159,8 +159,8 @@ function processIncomingFromChildRelationships(objectName, metadata, nodes, exis
         const fieldName = childRelationship.field;
 
         // Deduplication: Check if this edge already exists (from the Source's outgoing pass)
-        // Edge ID format: Source.Field
-        const edgeId = `${childSObject}.${fieldName}`;
+        // Edge ID format: Source.Field.Target
+        const edgeId = `${childSObject}.${fieldName}.${objectName}`;
         const alreadyExists = edgeId in existingEdges;
 
         if (alreadyExists) continue;

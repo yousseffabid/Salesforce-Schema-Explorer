@@ -32,10 +32,44 @@ export function getMyDomain(host) {
     // sandbox.lightning.force.com -> sandbox.my.salesforce.com
     normalized = normalized.replace(/\.lightning\.force\.com$/, ".my.salesforce.com");
 
-    // 2. Remove Microsoft Defender for Cloud Apps suffix
+    // 2. Handle Setup domains
+    // salesforce-setup.com -> salesforce.com
+    normalized = normalized.replace(/\.salesforce-setup\.com$/, ".salesforce.com");
+
+    // 3. Remove Microsoft Defender for Cloud Apps suffix
     normalized = normalized.replace(/\.mcas\.ms$/, "");
 
     return normalized;
+}
+
+/**
+ * Normalizes a Salesforce instance URL to its canonical hostname (my.salesforce.com).
+ * 
+ * @param {string} instanceUrl - The raw instance URL
+ * @returns {string} The canonical hostname (e.g. my.salesforce.com)
+ */
+export function getCanonicalHost(instanceUrl) {
+    if (!instanceUrl) return instanceUrl;
+    try {
+        const url = new URL(instanceUrl);
+        return getMyDomain(url.hostname);
+    } catch {
+        return getMyDomain(instanceUrl);
+    }
+}
+
+/**
+ * Normalizes a Salesforce instance URL to its full canonical URL form.
+ * Ensures protocol is preserved for API calls.
+ * 
+ * @param {string} instanceUrl - The raw instance URL
+ * @returns {string} The full canonical URL (e.g. https://my.salesforce.com)
+ */
+export function getCanonicalUrl(instanceUrl) {
+    if (!instanceUrl) return instanceUrl;
+    const host = getCanonicalHost(instanceUrl);
+    const protocol = instanceUrl.startsWith('http') ? new URL(instanceUrl).protocol : 'https:';
+    return `${protocol}//${host}`;
 }
 
 /**

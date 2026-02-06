@@ -82,7 +82,7 @@ export async function handleBuildObjectMetadataMap(message, sendResponse) {
         // Save & Respond
         const finalNodeCount = Object.keys(nodes).length;
         const finalEdgeCount = Object.keys(edges).length;
-        
+
         if (isUpdated) {
             const cacheKey = getMetadataCacheKey(instanceUrl);
             await saveMetadataToIndexedDb(cacheKey, { nodes, edges });
@@ -163,6 +163,45 @@ function determineObjectsToFetch(rootObjectName, nodes, edges) {
 }
 
 /**
+ * Helper: Merges new edges into the existing map without losing high-quality data.
+ * Prevents "incoming best guess" edges from overwriting "outgoing describe" edges.
+ * @param {Object} existingEdges - The current edge map.
+ * @param {Object} newEdges - The newly discovered edges.
+ */
+function mergeEdges(existingEdges, newEdges) {
+    for (const [id, newEdge] of Object.entries(newEdges)) {
+        const existingEdge = existingEdges[id];
+
+        if (!existingEdge) {
+            existingEdges[id] = newEdge;
+            continue;
+        }
+
+        // Logic for merging:
+        // 1. Data Source Quality: Describe > Discovery (Guess)
+        // 2. Structural Preference: Master-Detail > Lookup
+
+        const isNewEdgeGuess = newEdge.discoveredFromDescribe === false;
+        const isExistingEdgeReal = existingEdge.discoveredFromDescribe === true;
+        const isExistingMD = existingEdge.isMasterDetail === true;
+        const isNewMD = newEdge.isMasterDetail === true;
+
+        // Don't overwrite Describe data with a Guess
+        if (isNewEdgeGuess && isExistingEdgeReal) {
+            continue;
+        }
+
+        // Don't downgrade MD to Lookup if the new one is just a guess
+        if (isExistingMD && !isNewMD && isNewEdgeGuess) {
+            continue;
+        }
+
+        // If existing is a guess but new is real, OR if new discovered MD where existing was lookup guess
+        existingEdges[id] = newEdge;
+    }
+}
+
+/**
  * Helper: Fetches missing objects in batches and merges them into the map.
  * Standardized to work with edges as an object { [edgeId]: edge }.
  */
@@ -205,14 +244,14 @@ async function fetchAndMergeMissingObjects(instanceUrl, apiVersion, sessionId, i
         // Merge Nodes
         Object.assign(nodes, newNodes);
 
-        // Merge Edges (newEdges is now an object)
-        Object.assign(edges, newEdges);
+        // Merge Edges (using smart logic)
+        mergeEdges(edges, newEdges);
     }
 
     // Merge Root (if we have cached root data)
     if (missingRootData && rootNodes && rootEdges) {
         Object.assign(nodes, rootNodes);
-        Object.assign(edges, rootEdges);
+        mergeEdges(edges, rootEdges);
     }
 
     return true;

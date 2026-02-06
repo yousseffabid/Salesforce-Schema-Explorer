@@ -65,7 +65,7 @@ async function loadObjectSchema(objectApiName) {
 
     // Load user exclusions FIRST
     const { loadObjectExclusions } = await import('./modules/storage.js');
-    state.userExcludedObjects = loadObjectExclusions(objectApiName);
+    state.userExcludedObjects = loadObjectExclusions(state.instanceUrl, objectApiName);
 
 
     showGraph();
@@ -113,20 +113,29 @@ async function handleCacheRefresh() {
     logger.info('[Schema:refresh] Cache refresh initiated by user');
 
     resetLoadingOperations();
-    logger.debug('[Schema:refresh] Starting cache refresh operation');
-
     startLoadingOperation();
 
-    // Clear caches and state before reloading.
+    // Update context with latest state to preserve navigation and reset timer
+    const urlParams = new URLSearchParams(window.location.search);
+    const host = urlParams.get('host');
+    const storageKey = host ? `schemaContext_${host}` : 'schemaContext';
 
+    const storage = await chrome.storage.session.get(storageKey);
+    const context = storage[storageKey] || {};
+
+    context.objectApiName = state.objectApiName;
+    context.timestamp = Date.now();
+
+    await chrome.storage.session.set({ [storageKey]: context });
+
+    // Clear caches and state before reloading
     await clearObjectMetadataCache();
 
-    // Clear normalized graph data (already cleared by clearObjectMetadataCache, but explicit for clarity)
     state.nodes = {};
     state.edges = {};
     state.metadata.clear();
 
-
+    // 3. Reload
     window.location.reload();
 
   } catch (error) {
@@ -154,8 +163,12 @@ async function init() {
     showLoading();
 
     // Check session context
-    const storage = await chrome.storage.session.get('schemaContext');
-    const context = storage.schemaContext;
+    const urlParams = new URLSearchParams(window.location.search);
+    const host = urlParams.get('host');
+    const storageKey = host ? `schemaContext_${host}` : 'schemaContext';
+
+    const storage = await chrome.storage.session.get(storageKey);
+    const context = storage[storageKey];
 
     if (!context?.instanceUrl) {
       throw new Error('Missing context.\n\nPlease open SF Schema Explorer from a Salesforce page by clicking the 🔗 button.');

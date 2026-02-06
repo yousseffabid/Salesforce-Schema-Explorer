@@ -57,8 +57,8 @@ No more digging through Object Manager or switching between tabs. See object sch
 - **Reset Layout**: Recalculate node positions
 
 - **On-Demand Loading**: Metadata is fetched lazily as you explore. Only the current object and its immediate neighbors are loaded initially, ensuring maximum speed.
-- **Persistent Cache**: Objects are cached in IndexedDB for 7 days, making second loads of the same object instantaneous.
-- **Force Refresh**: Clear the cache via the reload icon in the "Relationships" legend to retrieve fresh metadata.
+- **Persistent Cache**: Objects are cached in IndexedDB for 7 days from the last time the extension fetched or updated data from Salesforce for this instance, making second loads of the same object instantaneous.
+- **Force Refresh**: Clear the entire instance metadata cache via the reload icon in the "Relationships" legend. After clearing, the extension retrieves fresh metadata for the currently selected object.
 - **Persistent Preferences**: Manual object exclusions/inclusions are preserved even after cache refreshes.
 
 ### 📱 Works Everywhere

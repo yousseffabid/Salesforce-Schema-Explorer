@@ -3,6 +3,7 @@
  */
 
 import { logger } from './utils.js';
+import { getCanonicalHost } from './api.js';
 
 // =============================================================================
 // CACHE CONFIGURATION
@@ -17,12 +18,14 @@ export const METADATA_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 // =============================================================================
 
 /**
- * Generates a cache key for metadata based on the instance URL.
+ * Generates a canonical cache key for metadata based on the instance URL.
+ * Ensures consistent keys across different subdomains (lightning, setup, etc.)
  * @param {string} instanceUrl - The Salesforce instance URL.
- * @returns {string} The cache key.
+ * @returns {string} The normalized cache key.
  */
 export function getMetadataCacheKey(instanceUrl) {
-    return `metadata_cache_${instanceUrl}`;
+    const canonicalHost = getCanonicalHost(instanceUrl);
+    return `metadata_cache_${canonicalHost}`;
 }
 
 function initMetadataDb() {

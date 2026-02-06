@@ -50,16 +50,23 @@ This document describes the message-passing API between content scripts, UI page
     // ... more objects
   },
   edges: {
-    'Account-Contact-ReportsToId': {
-      id: 'Account-Contact-ReportsToId',
+    'Account.ParentId.Account': {
+      id: 'Account.ParentId.Account',
       source: 'Account',
-      target: 'Contact',
-      fieldName: 'ReportsToId',
+      target: 'Account',
+      fieldName: 'ParentId',
+      isMasterDetail: false
+    },
+    'Contact.AccountId.Account': {
+      id: 'Contact.AccountId.Account',
+      source: 'Contact',
+      target: 'Account',
+      fieldName: 'AccountId',
       isMasterDetail: false
     }
   },
   fromCache: true,                                      // true if served from IndexedDB
-  timestamp: 1674567890123                              // Cache timestamp
+  timestamp: 1674567890123                              // Cache timestamp (last fetch from Salesforce/update to cache)
 }
 ```
 
@@ -74,15 +81,15 @@ This document describes the message-passing API between content scripts, UI page
 
 1. **Lazy Loading**: If `rootObjectName` is present, it fetches only that object and its neighbors (incoming/outgoing).
 2. **Delta Updates**: Only missing objects are added to the fetch queue; existing cache entries are preserved and merged.
-3. **Persistance**: Results are merged into the IndexedDB store for 7-day persistence.
+3. **Persistence**: Results are merged into the IndexedDB store with a 7-day duration (calculated from the last time the extension fetched or updated data from Salesforce for this instance).
 4. **Normalized Storage**: Data is split into `nodes` (metadata) and `edges` (relationships) for efficient graph traversal.
 5. **Efficiency**: Startup is instant (<1s) for cached data.
 
 **Cache Invalidation**:
 
-- 7-day TTL (configurable in `background/modules/cache.js`)
-- Manual refresh via `clearMetadataCache` message
-- Auto-reloads on user request or manual refresh button
+- 7-day TTL (7 days from the last time the extension fetched or updated data from Salesforce; configurable in `background/modules/cache.js`)
+- Manual refresh via `clearMetadataCache` message.
+- The refresh function invalidates the entire metadata cache for the current instance; the UI then re-fetches metadata focusing on the currently selected object.
 
 ---
 
@@ -355,3 +362,4 @@ async function refreshMetadata() {
 - **In-memory access**: <0.1ms once loaded.
 - **Scalability**: Handles 5000+ objects by only loading the visible "Graph Context".
 - **Memory**: Strips unused fields to keep IndexedDB growth linear (~50KB per unique explored object).
+- **Cache Lifecycle**: Data is preserved for 7 days from the last time the extension fetched or updated data from Salesforce for this instance.

@@ -6,7 +6,7 @@
 'use strict';
 
 import { logger, isSalesforceUrl } from './modules/utils.js';
-import { fetchWithRetry, MAX_RETRY_ATTEMPTS } from './modules/api.js';
+import { fetchWithRetry, MAX_RETRY_ATTEMPTS, getCanonicalUrl, getCanonicalHost } from './modules/api.js';
 import { sessionManager } from './modules/session.js';
 import { handleBuildObjectMetadataMap, handleClearMetadataCache } from './modules/metadata.js';
 
@@ -114,9 +114,12 @@ function handleOpenSchemaTab(message, sendResponse) {
     return;
   }
 
+  const canonicalHost = getCanonicalHost(instanceUrl);
+  const storageKey = `schemaContext_${canonicalHost}`;
+
   const contextData = {
-    schemaContext: {
-      instanceUrl,
+    [storageKey]: {
+      instanceUrl: getCanonicalUrl(instanceUrl),
       objectApiName: objectApiName || null,
       sessionId: sessionId || null,
       isSetupDomain: isSetupDomain || false,
@@ -126,8 +129,8 @@ function handleOpenSchemaTab(message, sendResponse) {
 
   chrome.storage.session.set(contextData)
     .then(() => {
-      logger.debug('[Background:handleOpenSchemaTab] Context stored successfully');
-      const schemaUrl = chrome.runtime.getURL('schema/schema.html');
+      logger.debug(`[Background:handleOpenSchemaTab] Context stored successfully for ${canonicalHost}`);
+      const schemaUrl = chrome.runtime.getURL(`schema/schema.html?host=${canonicalHost}`);
       chrome.tabs.create({ url: schemaUrl });
       sendResponse({ success: true });
     })
@@ -191,12 +194,8 @@ async function handleResolveObjectId(message, sendResponse) {
 
   try {
     const sessionId = message.sessionId || await getSessionId(instanceUrl);
-
     if (!sessionId) {
-      sendResponse({
-        success: false,
-        error: 'No valid session ID found. Please log in to Salesforce first.'
-      });
+      sendResponse({ success: false, error: 'No valid session ID found.' });
       return;
     }
 
@@ -220,10 +219,10 @@ async function handleResolveObjectId(message, sendResponse) {
       });
     }
   } catch (error) {
-    logger.error('[Background:handleResolveObjectId] Object ID resolution failed', { error: error.message });
+    logger.error('[Background:handleResolveObjectId] Resolution failed', { objectId, error: error.message || error });
     sendResponse({
       success: false,
-      error: error.message
+      error: error.message || 'Unknown error'
     });
   }
 }

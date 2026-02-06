@@ -126,9 +126,10 @@ function processOutgoingRelationships(objectName, strippedMetadata) {
                     fieldName: field.name,
                     fieldLabel: field.label,
                     relationshipName: field.relationshipName,
-                    type: 'Lookup',
+                    type: isMasterDetail ? 'MasterDetail' : 'Lookup',
                     isMasterDetail,
-                    order: field.relationshipOrder
+                    order: field.relationshipOrder,
+                    discoveredFromDescribe: true // High quality info
                 });
             }
         }
@@ -185,11 +186,9 @@ function processIncomingFromChildRelationships(objectName, metadata, nodes, exis
             };
         }
 
-        // Master-Detail relationships have both cascadeDelete=true AND restrictedDelete=true
-        // Lookup relationships may have cascadeDelete but not restrictedDelete
-        const isMasterDetail =
-            childRelationship.cascadeDelete === true &&
-            childRelationship.restrictedDelete === true;
+        // Master-Detail relationships have cascadeDelete=true
+        // Lookup relationships typically have cascadeDelete=false
+        const isMasterDetail = childRelationship.cascadeDelete === true;
 
         incomingEdges.push({
             id: edgeId,
@@ -201,7 +200,8 @@ function processIncomingFromChildRelationships(objectName, metadata, nodes, exis
             relationshipName: childRelationship.relationshipName,
             type: isMasterDetail ? 'MasterDetail' : 'Lookup',
             isMasterDetail,
-            order: null // Not available from childRelationships
+            order: null, // Not available from childRelationships
+            discoveredFromDescribe: false // Best guess from childRelationship list
         });
     }
 

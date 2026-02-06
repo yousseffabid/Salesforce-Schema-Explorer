@@ -235,7 +235,7 @@ window.SFSchema = window.SFSchema || {};
         isResolving = true;
 
         try {
-            const authSessionId = NS.Session.getSessionId();
+            const authSessionId = await NS.Session.getSessionId();
 
             return await new Promise((resolve, reject) => {
                 chrome.runtime.sendMessage(

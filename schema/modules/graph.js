@@ -22,9 +22,6 @@ import { isObjectExcluded } from './excludedObjects.js';
  * @returns {Promise<void>}
  */
 export async function buildGraph(mainMetadata) {
-    // Load user object exclusions for this root
-    state.userExcludedObjects = loadObjectExclusions(mainMetadata.name);
-
     updateLegendCounts();
     updateObjectsCount();
 
@@ -119,11 +116,12 @@ export async function buildGraph(mainMetadata) {
     // Build edges (Cytoscape format)
     const edges = edgesToRender.map((edge, index) => {
         const isOutgoing = edge.source === mainMetadata.name;
+        const isMasterDetail = edge.isMasterDetail === true || edge.type === 'MasterDetail';
 
         let label = 'Lookup';
         let type = 'lookup';
 
-        if (edge.isMasterDetail) {
+        if (isMasterDetail) {
             type = 'masterDetail';
             if (edge.order === 0) label = 'MD (Primary)';
             else if (edge.order === 1) label = 'MD (Secondary)';

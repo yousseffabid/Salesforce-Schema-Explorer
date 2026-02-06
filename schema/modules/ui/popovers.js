@@ -208,7 +208,7 @@ async function handleObjectPopoverSave() {
 
     // Persist changes
     const { saveObjectExclusions } = await import('../storage.js');
-    saveObjectExclusions(state.objectApiName, state.userExcludedObjects);
+    saveObjectExclusions(state.instanceUrl, state.objectApiName, state.userExcludedObjects);
 
     // Refresh the graph
     refreshGraphVisibility(); // This rebuilds the graph

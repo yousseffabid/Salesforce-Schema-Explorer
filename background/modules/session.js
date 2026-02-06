@@ -4,7 +4,7 @@
  */
 
 import { logger } from './utils.js';
-import { getMyDomain } from './api.js';
+import { getMyDomain, getCanonicalUrl } from './api.js';
 
 /**
  * Session manager with cookie extraction only
@@ -23,8 +23,10 @@ export class SessionManager {
       throw new Error('Instance URL required');
     }
 
-    // Check cache first
-    const cached = this.cache.get(instanceUrl);
+    // Check cache first (using canonical URL)
+    const canonicalUrl = getCanonicalUrl(instanceUrl);
+    const cached = this.cache.get(canonicalUrl);
+
     if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
       logger.debug('[SessionManager] Using cached session');
       return cached.sessionId;
@@ -34,8 +36,8 @@ export class SessionManager {
     const sessionId = await this.extractFromCookies(instanceUrl);
 
     if (sessionId) {
-      // Cache the result
-      this.cache.set(instanceUrl, {
+      // Cache the result (using canonical URL)
+      this.cache.set(canonicalUrl, {
         sessionId,
         timestamp: Date.now()
       });
@@ -135,7 +137,7 @@ export class SessionManager {
    */
   clearCache(instanceUrl = null) {
     if (instanceUrl) {
-      this.cache.delete(instanceUrl);
+      this.cache.delete(getCanonicalUrl(instanceUrl));
     } else {
       this.cache.clear();
     }

@@ -92,13 +92,15 @@ export function getActiveRelationships() {
         else if (state.activeRelationshipView === 'all' && (isOutgoing || isIncoming)) include = true;
 
         if (include) {
+            const isMasterDetail = edge.isMasterDetail === true || edge.type === 'MasterDetail';
             const rel = {
                 ...edge,
                 sourceObject: edge.source,
-                targetObject: edge.target
+                targetObject: edge.target,
+                isMasterDetail // Ensure it's correctly set for the filter below
             };
 
-            if (edge.isMasterDetail) masterDetail.push(rel);
+            if (isMasterDetail) masterDetail.push(rel);
             else lookup.push(rel);
         }
     });

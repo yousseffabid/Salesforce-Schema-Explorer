@@ -64,6 +64,7 @@ No more digging through Object Manager or switching between tabs. See object sch
 ### 📱 Works Everywhere
 
 The extension works on:
+
 - Salesforce Home Page
 - Record Pages
 - List Views
@@ -71,9 +72,9 @@ The extension works on:
 
 ## Installation
 
-### From Chrome Web Store (Not Available Yet)
+### From Chrome Web Store
 
-1. Visit the [Salesforce Schema Explorer](https://chrome.google.com/webstore) page
+1. Visit the [Salesforce Schema Explorer](https://chromewebstore.google.com/detail/salesforce-schema-explore/dhdaekjgnfelnmdmmpidpljegmjbkagl) page
 2. Click **"Add to Chrome"**
 3. Confirm the installation
 4. Navigate to any Salesforce page to start using
@@ -104,13 +105,13 @@ The extension works on:
 
 ### Understanding the Graph
 
-| Element | Description |
-|---------|-------------|
-| **Blue Node** | The main/selected object |
-| **Gray Nodes** | Related objects |
-| **Purple Lines** | Lookup relationships |
-| **Red Lines** | Master-Detail relationships |
-| **Solid Lines** | Outgoing relationships (Main object points to related object) |
+| Element          | Description                                                   |
+| ---------------- | ------------------------------------------------------------- |
+| **Blue Node**    | The main/selected object                                      |
+| **Gray Nodes**   | Related objects                                               |
+| **Purple Lines** | Lookup relationships                                          |
+| **Red Lines**    | Master-Detail relationships                                   |
+| **Solid Lines**  | Outgoing relationships (Main object points to related object) |
 | **Dashed Lines** | Incoming relationships (Related object points to main object) |
 
 ### Field Panel Features
@@ -124,12 +125,12 @@ The extension works on:
 
 This extension requires minimal permissions:
 
-| Permission | Purpose |
-|------------|---------|
-| `activeTab` | Access the current Salesforce tab |
-| `storage` | Store session context temporarily |
-| `scripting` | Inject the extension UI |
-| **Host Permissions** | Only Salesforce domains |
+| Permission           | Purpose                           |
+| -------------------- | --------------------------------- |
+| `activeTab`          | Access the current Salesforce tab |
+| `storage`            | Store session context temporarily |
+| `scripting`          | Inject the extension UI           |
+| **Host Permissions** | Only Salesforce domains           |
 
 ### What is accessed
 
@@ -294,11 +295,11 @@ Contributions are welcome! Please:
 5. Open a Pull Request
 
 ## Third-Party Libraries
- 
+
 This project uses the following open-source libraries:
- 
+
 - [Cytoscape.js](https://js.cytoscape.org/) - Graph theory (network) library for visualization and analysis (MIT License)
- 
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
@@ -307,7 +308,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - **Issues**: Report bugs via GitHub Issues
 - **Feature Requests**: Submit ideas via GitHub Issues
-- **Questions**: Check existing issues or  create a new one
+- **Questions**: Check existing issues or create a new one
 
 ---
 
